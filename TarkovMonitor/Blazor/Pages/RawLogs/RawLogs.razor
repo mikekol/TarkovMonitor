@@ -1,6 +1,5 @@
 ﻿@page "/raw"
 @using System.Diagnostics
-@inject GameWatcher eft
 @inject IDialogService DialogService
 @inject LocalizationService LocalizationService
 @layout AppLayout
@@ -55,7 +54,14 @@
 
     private void OpenLogsFolder()
     {
-        Process.Start("explorer.exe", eft.CurrentLogsFolder);
+        var folder = GetLogsFolder();
+        if (folder != "") Process.Start("explorer.exe", folder);
+    }
+
+    private string GetLogsFolder()
+    {
+        try { return GameWatcher.GetDefaultLogsFolder(); }
+        catch { return ""; }
     }
 
     protected override void OnInitialized()
@@ -88,6 +94,6 @@
 
     private bool LogsFolderSet()
     {
-        return eft.CurrentLogsFolder != "";
+        return GetLogsFolder() != "";
     }
 }

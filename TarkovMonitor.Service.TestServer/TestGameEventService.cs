@@ -6,13 +6,13 @@ namespace TarkovMonitor.Service.TestServer;
 
 public class TestGameEventService : TarkovMonitorService.TarkovMonitorServiceBase
 {
-    private readonly ConcurrentBag<IAsyncStreamWriter<GameEvent>> _activeStreams = new();
+    private readonly ConcurrentBag<IServerStreamWriter<GameEvent>> _activeStreams = new();
 
     public int ActiveStreamCount => _activeStreams.Count;
 
     public override async Task SubscribeToGameEvents(
         SubscriptionRequest request,
-        IAsyncStreamWriter<GameEvent> responseStream,
+        IServerStreamWriter<GameEvent> responseStream,
         ServerCallContext context)
     {
         Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Client connected (total: {_activeStreams.Count + 1})");
@@ -65,7 +65,7 @@ public class TestGameEventService : TarkovMonitorService.TarkovMonitorServiceBas
             Data = { { "payload", data } }
         };
 
-        var inactiveStreams = new List<IAsyncStreamWriter<GameEvent>>();
+        var inactiveStreams = new List<IServerStreamWriter<GameEvent>>();
 
         foreach (var stream in _activeStreams)
         {

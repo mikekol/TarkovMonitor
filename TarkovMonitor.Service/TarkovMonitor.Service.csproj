@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -11,15 +11,12 @@
   <ItemGroup>
     <PackageReference Include="Grpc.AspNetCore" Version="2.60.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.0" />
-    <PackageReference Include="Refit" Version="7.0.0" />
-    <PackageReference Include="Refit.HttpClientFactory" Version="7.0.0" />
+    <PackageReference Include="Refit" Version="7.2.22" />
+    <PackageReference Include="Refit.HttpClientFactory" Version="7.2.22" />
   </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="Protos/game_events.proto" GrpcServices="Server" />
-  </ItemGroup>
-
-  <ItemGroup>
+    <ProjectReference Include="..\TarkovMonitor.Service.Contracts\TarkovMonitor.Service.Contracts.csproj" />
     <ProjectReference Include="..\TarkovMonitor\TarkovMonitor.csproj" />
   </ItemGroup>
 

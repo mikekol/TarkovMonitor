@@ -30,11 +30,15 @@ public class GameEventBroadcasterService : TarkovMonitorService.TarkovMonitorSer
 
     public override async Task SubscribeToGameEvents(
         SubscriptionRequest request,
-        IAsyncStreamWriter<GameEvent> responseStream,
+        IServerStreamWriter<GameEvent> responseStream,
         ServerCallContext context)
     {
         _logger.LogInformation("Client subscribed to game events");
         lock (_streamsLock) { _activeStreams.Add(responseStream); }
+
+        // Push current profile immediately so late-joining clients don't miss InitialReadComplete
+        if (!string.IsNullOrEmpty(GameWatcher.CurrentProfile.Id))
+            await SendToStream(responseStream, "InitialReadComplete", ProfileData(GameWatcher.CurrentProfile));
 
         try
         {
@@ -277,6 +281,18 @@ public class GameEventBroadcasterService : TarkovMonitorService.TarkovMonitorSer
         if (args.RaidInfo.StartedTime.HasValue)
             data["startedTimeMs"] = new DateTimeOffset(args.RaidInfo.StartedTime.Value).ToUnixTimeMilliseconds().ToString();
         return data;
+    }
+
+    private static async Task SendToStream(IServerStreamWriter<GameEvent> stream, string eventType, Dictionary<string, string> data)
+    {
+        var protoEvent = new GameEvent
+        {
+            EventType = eventType,
+            TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+        };
+        foreach (var kvp in data)
+            protoEvent.Data[kvp.Key] = kvp.Value;
+        await stream.WriteAsync(protoEvent);
     }
 
     private void Broadcast(string eventType, Dictionary<string, string> data)

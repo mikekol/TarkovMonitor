@@ -8,7 +8,7 @@ using Microsoft.Win32;
 
 namespace TarkovMonitor
 {
-    internal class GameWatcher
+    public class GameWatcher
     {
         private Process? process;
         private readonly System.Timers.Timer processTimer;
@@ -317,7 +317,9 @@ namespace TarkovMonitor
             string filename = e.Name ?? "";
             if (filename.Contains("application.log") || filename.Contains("application_000.log"))
             {
-                StartNewMonitor(e.FullPath);
+                var monitor = StartNewMonitor(e.FullPath);
+                if (monitor != null)
+                    monitor.InitialReadComplete += (_, _) => InitialReadComplete?.Invoke(this, new(CurrentProfile));
             }
             if (filename.Contains("notifications.log") || filename.Contains("notifications_000.log"))
             {

@@ -2,7 +2,7 @@ using TarkovMonitor;
 using TarkovMonitor.Service.Services;
 using TarkovMonitor.Service.Contracts;
 
-var builder = Host.CreateApplicationBuilder(args);
+var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
 
