@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using TarkovMonitor.Services;
 
 namespace TarkovMonitor
 {
@@ -21,27 +22,21 @@ namespace TarkovMonitor
         private System.Threading.Timer timerRunThrough;
         private System.Threading.Timer timerScavCooldown;
         private CancellationTokenSource cancellationTokenSource = new();
-        private readonly GameWatcher eft;
 
-        public TimersManager(GameWatcher eft)
+        public TimersManager(GameEventClient client)
         {
-            this.eft = eft;
-
-            // Get Scav cooldown time from TarkovTracker but ensuring the API has been called and hydrated at least once.
-            // without this, the scav cooldown time will be 25.
-            // We only need to run this the first time the app starts.
             TarkovTracker.ProgressRetrieved += (sender, e) =>
             {
                 ScavCooldownTime = TimeSpan.FromSeconds(TarkovDev.ScavCooldownSeconds());
                 Debug.WriteLine($"ScavCooldownTime: {ScavCooldownTime}");
-                
+
                 TarkovTracker.ProgressRetrieved -= (sender, e) => { };
             };
 
             RunThroughRemainingTime = Properties.Settings.Default.runthroughTime;
-            
-            this.eft.RaidStarted += Eft_RaidStarted;
-            this.eft.RaidEnded += Eft_RaidEnded;
+
+            client.RaidStarted += Eft_RaidStarted;
+            client.RaidEnded += Eft_RaidEnded;
 
             timerRaid = new System.Threading.Timer(TimerRaid_Elapsed, null, Timeout.Infinite, 1000);
             timerRunThrough = new System.Threading.Timer(TimerRunThrough_Elapsed, null, Timeout.Infinite, 1000);

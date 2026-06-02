@@ -56,29 +56,17 @@ namespace TarkovMonitor
             return Query(query, new());
         }
 
-        public static void AddFleaSale(FleaSoldMessageLogContent e, Profile profile)
+        public static void AddFleaSale(string profileId, string soldItemId, string buyer, int soldItemCount, Dictionary<string, int> receivedItems)
         {
             var sql = "INSERT INTO flea_sales(profile_id, item_id, buyer, count, currency, price) VALUES(@profile_id, @item_id, @buyer, @count, @currency, @price);";
             var parameters = new Dictionary<string, object>
             {
-                {
-                    "profile_id", profile.Id
-                },
-                {
-                    "item_id", e.SoldItemId
-                },
-                {
-                    "buyer", e.Buyer
-                },
-                {
-                    "count", e.SoldItemCount
-                },
-                {
-                    "currency", e.ReceivedItems.ElementAt(0).Key
-                },
-                {
-                    "price", e.ReceivedItems.ElementAt(0).Value
-                },
+                { "profile_id", profileId },
+                { "item_id", soldItemId },
+                { "buyer", buyer },
+                { "count", soldItemCount },
+                { "currency", receivedItems.ElementAt(0).Key },
+                { "price", receivedItems.ElementAt(0).Value },
             };
             Query(sql, parameters);
         }
