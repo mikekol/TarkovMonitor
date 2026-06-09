@@ -86,7 +86,9 @@ public class GameEventClient : IAsyncDisposable
         try
         {
             if (_grpcClient == null) return;
-            var stream = _grpcClient.SubscribeToGameEvents(new SubscriptionRequest(), cancellationToken: cancellationToken);
+            var version = typeof(GameEventClient).Assembly.GetName().Version?.ToString() ?? "1.0.0";
+            var clientAgent = $"TarkovMonitor.UI/{version}";
+            var stream = _grpcClient.SubscribeToGameEvents(new SubscriptionRequest { ClientAgent = clientAgent }, cancellationToken: cancellationToken);
 
             await foreach (var gameEvent in stream.ResponseStream.ReadAllAsync(cancellationToken))
                 DispatchGameEvent(gameEvent);
@@ -218,6 +220,9 @@ public class GameEventClient : IAsyncDisposable
         if (long.TryParse(d.GetValueOrDefault("startedTimeMs", ""), out var stMs) && stMs > 0)
             startedTime = DateTimeOffset.FromUnixTimeMilliseconds(stMs).UtcDateTime;
 
+        if (long.TryParse(d.GetValueOrDefault("startingTimeMs", ""), out var stingMs) && stingMs > 0)
+            startingTime = DateTimeOffset.FromUnixTimeMilliseconds(stingMs).UtcDateTime;
+
         switch (raidType)
         {
             case RaidType.PVE:
@@ -226,7 +231,7 @@ public class GameEventClient : IAsyncDisposable
                 break;
             case RaidType.PMC:
                 startedTime ??= DateTime.UtcNow;
-                startingTime = startedTime.Value.AddSeconds(-10);
+                startingTime ??= startedTime.Value.AddSeconds(-10);  // fallback if not serialized
                 break;
             case RaidType.Scav:
                 startedTime ??= DateTime.UtcNow;
@@ -265,7 +270,9 @@ public class GameEventClient : IAsyncDisposable
         float.TryParse(d.GetValueOrDefault("x", "0"), NumberStyles.Float, CultureInfo.InvariantCulture, out var x);
         float.TryParse(d.GetValueOrDefault("y", "0"), NumberStyles.Float, CultureInfo.InvariantCulture, out var y);
         float.TryParse(d.GetValueOrDefault("z", "0"), NumberStyles.Float, CultureInfo.InvariantCulture, out var z);
-        return new PlayerPositionEventArgs(raidInfo, profile, new Position(x, y, z), 0f, "");
+        float.TryParse(d.GetValueOrDefault("rotation", "0"), NumberStyles.Float, CultureInfo.InvariantCulture, out var rotation);
+        var filename = d.GetValueOrDefault("filename", "");
+        return new PlayerPositionEventArgs(raidInfo, profile, new Position(x, y, z), rotation, filename);
     }
 
     private static FleaSaleEventArgs BuildFleaSaleArgs(IReadOnlyDictionary<string, string> d)

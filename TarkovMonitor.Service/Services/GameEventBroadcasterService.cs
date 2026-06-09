@@ -4,6 +4,7 @@ using TarkovMonitor.Service.Contracts;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Globalization;
+using Microsoft.Extensions.Options;
 
 namespace TarkovMonitor.Service.Services;
 
@@ -12,6 +13,8 @@ public class GameEventBroadcasterService : TarkovMonitorService.TarkovMonitorSer
     private readonly GameWatcher _gameWatcher;
     private readonly IServiceConfiguration _config;
     private readonly ILogger<GameEventBroadcasterService> _logger;
+    private readonly IHostApplicationLifetime _appLifetime;
+    private readonly bool _verboseLogging;
 
     private readonly List<IServerStreamWriter<GameEvent>> _activeStreams = new();
     private readonly object _streamsLock = new();
@@ -19,11 +22,15 @@ public class GameEventBroadcasterService : TarkovMonitorService.TarkovMonitorSer
     public GameEventBroadcasterService(
         GameWatcher gameWatcher,
         IServiceConfiguration config,
-        ILogger<GameEventBroadcasterService> logger)
+        ILogger<GameEventBroadcasterService> logger,
+        IOptions<TarkovMonitorOptions> options,
+        IHostApplicationLifetime appLifetime)
     {
         _gameWatcher = gameWatcher;
         _config = config;
         _logger = logger;
+        _appLifetime = appLifetime;
+        _verboseLogging = options.Value.VerboseLogging;
 
         SubscribeToGameWatcherEvents();
     }
@@ -33,7 +40,7 @@ public class GameEventBroadcasterService : TarkovMonitorService.TarkovMonitorSer
         IServerStreamWriter<GameEvent> responseStream,
         ServerCallContext context)
     {
-        _logger.LogInformation("Client subscribed to game events");
+        _logger.LogInformation("Client subscribed to game events: {ClientAgent}", request.ClientAgent);
         lock (_streamsLock) { _activeStreams.Add(responseStream); }
 
         // Push current profile immediately so late-joining clients don't miss InitialReadComplete
@@ -42,8 +49,9 @@ public class GameEventBroadcasterService : TarkovMonitorService.TarkovMonitorSer
 
         try
         {
-            while (!context.CancellationToken.IsCancellationRequested)
-                await Task.Delay(1000, context.CancellationToken);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, _appLifetime.ApplicationStopping);
+            while (!linkedCts.Token.IsCancellationRequested)
+                await Task.Delay(1000, linkedCts.Token);
         }
         catch (OperationCanceledException)
         {
@@ -235,6 +243,8 @@ public class GameEventBroadcasterService : TarkovMonitorService.TarkovMonitorSer
                 ["x"] = args.Position.X.ToString(CultureInfo.InvariantCulture),
                 ["y"] = args.Position.Y.ToString(CultureInfo.InvariantCulture),
                 ["z"] = args.Position.Z.ToString(CultureInfo.InvariantCulture),
+                ["rotation"] = args.Rotation.ToString(CultureInfo.InvariantCulture),
+                ["filename"] = args.Filename,
                 ["map"] = args.RaidInfo.Map,
                 ["raidId"] = args.RaidInfo.RaidId
             });
@@ -278,6 +288,8 @@ public class GameEventBroadcasterService : TarkovMonitorService.TarkovMonitorSer
         data["reconnected"] = args.RaidInfo.Reconnected.ToString();
         data["queueTime"] = args.RaidInfo.QueueTime.ToString(CultureInfo.InvariantCulture);
         data["screenshotsJson"] = JsonSerializer.Serialize(args.RaidInfo.Screenshots);
+        if (args.RaidInfo.StartingTime.HasValue)
+            data["startingTimeMs"] = new DateTimeOffset(args.RaidInfo.StartingTime.Value).ToUnixTimeMilliseconds().ToString();
         if (args.RaidInfo.StartedTime.HasValue)
             data["startedTimeMs"] = new DateTimeOffset(args.RaidInfo.StartedTime.Value).ToUnixTimeMilliseconds().ToString();
         return data;
@@ -307,6 +319,9 @@ public class GameEventBroadcasterService : TarkovMonitorService.TarkovMonitorSer
 
         List<IServerStreamWriter<GameEvent>> snapshot;
         lock (_streamsLock) { snapshot = new List<IServerStreamWriter<GameEvent>>(_activeStreams); }
+
+        if (_verboseLogging)
+            _logger.LogInformation("Broadcasting {EventType} to {ClientCount} client(s)", eventType, snapshot.Count);
 
         var dead = new List<IServerStreamWriter<GameEvent>>();
         foreach (var stream in snapshot)

@@ -10,7 +10,9 @@ service TarkovMonitorService {
  rpc GetStatus(GetStatusRequest) returns (ServiceStatus);
 }
 
-message SubscriptionRequest {}
+message SubscriptionRequest {
+ string client_agent = 1;
+}
 
 message GetConfigRequest {}
 

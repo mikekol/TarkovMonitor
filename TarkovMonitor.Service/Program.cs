@@ -6,9 +6,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
 
+builder.Services.Configure<TarkovMonitorOptions>(builder.Configuration.GetSection(TarkovMonitorOptions.SectionName));
 builder.Services.AddSingleton<IServiceConfiguration, JsonServiceConfiguration>();
 builder.Services.AddSingleton<GameWatcher>();
 builder.Services.AddGrpc();
+builder.Services.AddSingleton<GameEventBroadcasterService>();
 builder.Services.AddWindowsService();
 builder.Services.AddHostedService<GameWatcherHostedService>();
 
