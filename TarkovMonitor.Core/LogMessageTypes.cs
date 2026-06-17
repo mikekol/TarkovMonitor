@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 
 namespace TarkovMonitor
 {
@@ -251,7 +251,7 @@ namespace TarkovMonitor
                         items[item._tpl] += item.upd?.StackObjectsCount ?? 1;
                         continue;
                     }
-					items.Add(item._tpl, item.upd?.StackObjectsCount ?? 1);
+						items.Add(item._tpl, item.upd?.StackObjectsCount ?? 1);
                 }
                 return items;
             }

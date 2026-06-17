@@ -1,0 +1,66 @@
+<Page
+    x:Class="TarkovMonitor.StreamerDashboard.Pages.DashboardPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:TarkovMonitor.StreamerDashboard.Pages">
+
+  <Grid Padding="16" ColumnSpacing="16">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="200"/>
+      <ColumnDefinition Width="*"/>
+      <ColumnDefinition Width="230"/>
+    </Grid.ColumnDefinitions>
+
+    <!-- ── Left: Game State ── -->
+    <StackPanel Grid.Column="0" Spacing="0">
+      <TextBlock Text="Game State" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="0,0,0,12"/>
+
+      <Grid Margin="0,0,0,6" ColumnSpacing="8">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="70"/><ColumnDefinition/></Grid.ColumnDefinitions>
+        <TextBlock Text="Map" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="13"/>
+        <TextBlock x:Name="MapText" Grid.Column="1" Text="—" FontSize="13"/>
+      </Grid>
+      <Grid Margin="0,0,0,6" ColumnSpacing="8">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="70"/><ColumnDefinition/></Grid.ColumnDefinitions>
+        <TextBlock Text="Raid type" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="13"/>
+        <TextBlock x:Name="RaidTypeText" Grid.Column="1" Text="—" FontSize="13"/>
+      </Grid>
+      <Grid Margin="0,0,0,6" ColumnSpacing="8">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="70"/><ColumnDefinition/></Grid.ColumnDefinitions>
+        <TextBlock Text="Profile" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="13"/>
+        <TextBlock x:Name="ProfileText" Grid.Column="1" Text="—" FontSize="13"/>
+      </Grid>
+
+      <TextBlock Text="Overlay URL" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="0,20,0,8"/>
+      <TextBlock x:Name="OverlayUrlLabel" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap"/>
+      <HyperlinkButton x:Name="OpenOverlayBtn" Content="Open in browser" Padding="0,4,0,0"/>
+    </StackPanel>
+
+    <!-- ── Centre: WebView2 Preview ── -->
+    <Border
+        Grid.Column="1"
+        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+        BorderThickness="1"
+        CornerRadius="4"
+        Background="#111">
+      <WebView2 x:Name="OverlayPreview"/>
+    </Border>
+
+    <!-- ── Right: Event Log ── -->
+    <StackPanel Grid.Column="2" Spacing="0">
+      <TextBlock Text="Event Log" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="0,0,0,8"/>
+      <ScrollViewer x:Name="LogScroll" VerticalScrollBarVisibility="Auto" MaxHeight="700">
+        <ItemsControl x:Name="LogList">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="local:LogEntry">
+              <StackPanel Margin="0,0,0,6">
+                <TextBlock Text="{x:Bind Time}" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                <TextBlock Text="{x:Bind EventType}" FontSize="12" FontWeight="SemiBold"/>
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </StackPanel>
+  </Grid>
+</Page>

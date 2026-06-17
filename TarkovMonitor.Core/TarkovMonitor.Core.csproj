@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- net10.0-windows is required for Microsoft.Win32.Registry access. UseWindowsForms is intentionally
+         absent so this library can be referenced by the headless Windows Service without pulling in WinForms. -->
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Refit supplies the HTTP client for TarkovTrackerClient. v11 uses source generators,
+         which is a prerequisite for Native AOT compatibility. -->
+    <PackageReference Include="Refit" Version="11.0.1" />
+    <PackageReference Include="Refit.HttpClientFactory" Version="11.0.1" />
+  </ItemGroup>
+
+</Project>

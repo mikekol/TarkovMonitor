@@ -1,0 +1,167 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Fragment>
+    <DirectoryRef Id="UIDir">
+      <Component Id="c_ui_9EC9D39F" Guid="*">
+        <File Source="..\publish\UI\App.config" />
+      </Component>
+      <Component Id="c_ui_EF87782A" Guid="*">
+        <File Source="..\publish\UI\Microsoft.Web.WebView2.Core.xml" />
+      </Component>
+      <Component Id="c_ui_0F36EF4C" Guid="*">
+        <File Source="..\publish\UI\Microsoft.Web.WebView2.WinForms.xml" />
+      </Component>
+      <Component Id="c_ui_79157EA9" Guid="*">
+        <File Source="..\publish\UI\Microsoft.Web.WebView2.Wpf.xml" />
+      </Component>
+      <Component Id="c_ui_F0B8429F" Guid="*">
+        <File Source="..\publish\UI\TarkovMonitor.Core.pdb" />
+      </Component>
+      <Component Id="c_ui_5B1C0568" Guid="*">
+        <File Source="..\publish\UI\TarkovMonitor.dll.config" />
+      </Component>
+      <Component Id="c_ui_D9C41305" Guid="*">
+        <File Source="..\publish\UI\TarkovMonitor.exe" />
+      </Component>
+      <Component Id="c_ui_86099E5A" Guid="*">
+        <File Source="..\publish\UI\TarkovMonitor.pdb" />
+      </Component>
+      <Component Id="c_ui_EEA10395" Guid="*">
+        <File Source="..\publish\UI\TarkovMonitor.Service.Contracts.pdb" />
+      </Component>
+      <Component Id="c_ui_E02B608F" Guid="*">
+        <File Source="..\publish\UI\TarkovMonitor.staticwebassets.endpoints.json" />
+      </Component>
+      <Directory Id="d_ui_D6C5E3B8" Name="wwwroot">
+        <Component Id="c_ui_ABC75B4F" Guid="*">
+          <File Source="..\publish\UI\wwwroot\index.html" />
+        </Component>
+        <Component Id="c_ui_CE6CBBE2" Guid="*">
+          <File Source="..\publish\UI\wwwroot\tarkov-dev-logo.svg" />
+        </Component>
+        <Component Id="c_ui_DAA92472" Guid="*">
+          <File Source="..\publish\UI\wwwroot\TarkovMonitor.styles.css" />
+        </Component>
+        <Component Id="c_ui_3A132966" Guid="*">
+          <File Source="..\publish\UI\wwwroot\tarkovtrackerlogo-mini-icon.svg" />
+        </Component>
+        <Directory Id="d_ui_3A454C4F" Name="_content">
+          <Directory Id="d_ui_2EDD2C62" Name="MudBlazor">
+            <Component Id="c_ui_178BBA34" Guid="*">
+              <File Source="..\publish\UI\wwwroot\_content\MudBlazor\MudBlazor.min.css" />
+            </Component>
+            <Component Id="c_ui_29DC59D6" Guid="*">
+              <File Source="..\publish\UI\wwwroot\_content\MudBlazor\MudBlazor.min.js" />
+            </Component>
+            <Component Id="c_ui_41366CC5" Guid="*">
+              <File Source="..\publish\UI\wwwroot\_content\MudBlazor\MudBlazor.min.js.map" />
+            </Component>
+          </Directory>
+        </Directory>
+        <Directory Id="d_ui_01B92D52" Name="_framework">
+          <Component Id="c_ui_F8B82369" Guid="*">
+            <File Source="..\publish\UI\wwwroot\_framework\blazor.modules.json" />
+          </Component>
+          <Component Id="c_ui_8FB68E1D" Guid="*">
+            <File Source="..\publish\UI\wwwroot\_framework\blazor.webview.js" />
+          </Component>
+        </Directory>
+        <Directory Id="d_ui_BEBA75C7" Name="css">
+          <Component Id="c_ui_BDD17EAF" Guid="*">
+            <File Source="..\publish\UI\wwwroot\css\app.css" />
+          </Component>
+        </Directory>
+        <Directory Id="d_ui_CC6F0F40" Name="img">
+          <Directory Id="d_ui_0EBBB551" Name="levelgroups">
+            <Component Id="c_ui_EA8C33BC" Guid="*">
+              <File Source="..\publish\UI\wwwroot\img\levelgroups\1.png" />
+            </Component>
+            <Component Id="c_ui_8B9CB364" Guid="*">
+              <File Source="..\publish\UI\wwwroot\img\levelgroups\10.png" />
+            </Component>
+            <Component Id="c_ui_1D567029" Guid="*">
+              <File Source="..\publish\UI\wwwroot\img\levelgroups\11.png" />
+            </Component>
+            <Component Id="c_ui_720B8DAB" Guid="*">
+              <File Source="..\publish\UI\wwwroot\img\levelgroups\12.png" />
+            </Component>
+            <Component Id="c_ui_FDA9BFD0" Guid="*">
+              <File Source="..\publish\UI\wwwroot\img\levelgroups\13.png" />
+            </Component>
+            <Component Id="c_ui_739E2E4D" Guid="*">
+              <File Source="..\publish\UI\wwwroot\img\levelgroups\14.png" />
+            </Component>
+            <Component Id="c_ui_D3B23381" Guid="*">
+              <File Source="..\publish\UI\wwwroot\img\levelgroups\15.png" />
+            </Component>
+            <Component Id="c_ui_4B2D3469" Guid="*">
+              <File Source="..\publish\UI\wwwroot\img\levelgroups\16.png" />
+            </Component>
+            <Component Id="c_ui_11C767C4" Guid="*">
+              <File Source="..\publish\UI\wwwroot\img\levelgroups\2.png" />
+            </Component>
+            <Component Id="c_ui_9BD5E259" Guid="*">
+              <File Source="..\publish\UI\wwwroot\img\levelgroups\3.png" />
+            </Component>
+            <Component Id="c_ui_596B4934" Guid="*">
+              <File Source="..\publish\UI\wwwroot\img\levelgroups\4.png" />
+            </Component>
+            <Component Id="c_ui_7E7D09FF" Guid="*">
+              <File Source="..\publish\UI\wwwroot\img\levelgroups\5.png" />
+            </Component>
+            <Component Id="c_ui_5E72FAAA" Guid="*">
+              <File Source="..\publish\UI\wwwroot\img\levelgroups\6.png" />
+            </Component>
+            <Component Id="c_ui_ED2ECD35" Guid="*">
+              <File Source="..\publish\UI\wwwroot\img\levelgroups\7.png" />
+            </Component>
+            <Component Id="c_ui_F2D452C6" Guid="*">
+              <File Source="..\publish\UI\wwwroot\img\levelgroups\8.png" />
+            </Component>
+            <Component Id="c_ui_F8B83FE3" Guid="*">
+              <File Source="..\publish\UI\wwwroot\img\levelgroups\9.png" />
+            </Component>
+          </Directory>
+        </Directory>
+      </Directory>
+    </DirectoryRef>
+    <ComponentGroup Id="UIFileComponents">
+      <ComponentRef Id="c_ui_9EC9D39F" />
+      <ComponentRef Id="c_ui_EF87782A" />
+      <ComponentRef Id="c_ui_0F36EF4C" />
+      <ComponentRef Id="c_ui_79157EA9" />
+      <ComponentRef Id="c_ui_F0B8429F" />
+      <ComponentRef Id="c_ui_5B1C0568" />
+      <ComponentRef Id="c_ui_D9C41305" />
+      <ComponentRef Id="c_ui_86099E5A" />
+      <ComponentRef Id="c_ui_EEA10395" />
+      <ComponentRef Id="c_ui_E02B608F" />
+      <ComponentRef Id="c_ui_ABC75B4F" />
+      <ComponentRef Id="c_ui_CE6CBBE2" />
+      <ComponentRef Id="c_ui_DAA92472" />
+      <ComponentRef Id="c_ui_3A132966" />
+      <ComponentRef Id="c_ui_178BBA34" />
+      <ComponentRef Id="c_ui_29DC59D6" />
+      <ComponentRef Id="c_ui_41366CC5" />
+      <ComponentRef Id="c_ui_F8B82369" />
+      <ComponentRef Id="c_ui_8FB68E1D" />
+      <ComponentRef Id="c_ui_BDD17EAF" />
+      <ComponentRef Id="c_ui_EA8C33BC" />
+      <ComponentRef Id="c_ui_8B9CB364" />
+      <ComponentRef Id="c_ui_1D567029" />
+      <ComponentRef Id="c_ui_720B8DAB" />
+      <ComponentRef Id="c_ui_FDA9BFD0" />
+      <ComponentRef Id="c_ui_739E2E4D" />
+      <ComponentRef Id="c_ui_D3B23381" />
+      <ComponentRef Id="c_ui_4B2D3469" />
+      <ComponentRef Id="c_ui_11C767C4" />
+      <ComponentRef Id="c_ui_9BD5E259" />
+      <ComponentRef Id="c_ui_596B4934" />
+      <ComponentRef Id="c_ui_7E7D09FF" />
+      <ComponentRef Id="c_ui_5E72FAAA" />
+      <ComponentRef Id="c_ui_ED2ECD35" />
+      <ComponentRef Id="c_ui_F2D452C6" />
+      <ComponentRef Id="c_ui_F8B83FE3" />
+    </ComponentGroup>
+  </Fragment>
+</Wix>

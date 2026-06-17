@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    WinUI3 build fix: when building with 'dotnet build' (not from VS), the .NET SDK looks for
+    Microsoft.Build.Packaging.Pri.Tasks.dll under its own tree, but the file lives in VS's MSBuild
+    extensions. Override AppxMSBuildToolsPath to point at the VS copy so the PRI generation step works.
+    The Condition prevents overriding when VS's own MSBuild sets it correctly.
+  -->
+  <!--
+    WinUI3 build fix: when 'dotnet build' is used (not VS), MSBuildExtensionsPath resolves to the
+    .NET SDK dir where Microsoft.Build.Packaging.Pri.Tasks.dll doesn't exist. Point directly at the
+    copy that VS's Windows App SDK workload installed. The Condition means VS's own MSBuild (which
+    already resolves correctly) won't be affected.
+  -->
+  <PropertyGroup>
+    <AppxMSBuildToolsPath Condition="!Exists('$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\AppxPackage\Microsoft.Build.Packaging.Pri.Tasks.dll')">C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Microsoft\VisualStudio\v18.0\AppxPackage\</AppxMSBuildToolsPath>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.17763.0</TargetFramework>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Platforms>x86;x64;arm64</Platforms>
+    <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
+    <UseWindowsTargetPlatformMinVersion>10.0.17763.0</UseWindowsTargetPlatformMinVersion>
+    <RootNamespace>TarkovMonitor.StreamerDashboard</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <!-- ASP.NET Core shared framework for embedded Kestrel + SignalR -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TarkovMonitor.Service.Contracts\TarkovMonitor.Service.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="wwwroot\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

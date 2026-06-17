@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+  <Package
+    Name="TarkovMonitor"
+    Manufacturer="the-hideout"
+    Version="$(var.ProductVersion)"
+    UpgradeCode="{7CB7F65D-2DF5-4D4C-81EB-97F218036B1C}">
+
+    <!--
+      UpgradeCode is a stable GUID that must never change across versions.
+      It identifies this product family to Windows Installer for upgrade detection.
+    -->
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of TarkovMonitor is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Add/Remove Programs metadata -->
+    <Icon Id="TarkovMonitorIcon" SourceFile="..\TarkovMonitor\Resources\TarkovDev.ico" />
+    <Property Id="ARPPRODUCTICON" Value="TarkovMonitorIcon" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/the-hideout/TarkovMonitor" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/the-hideout/TarkovMonitor" />
+
+    <!-- Root feature reference — pulls the Features.wxs fragment into the linked output -->
+    <FeatureRef Id="FeatureAll" />
+
+    <!-- UI: WixUI_FeatureTree shows a feature-selection dialog -->
+    <ui:WixUI Id="WixUI_FeatureTree" />
+
+    <!-- License text shown in the UI (plain text or RTF) -->
+    <WixVariable Id="WixUILicenseRtf" Value="..\LICENSE.rtf" />
+
+    <!-- Directory structure -->
+    <StandardDirectory Id="ProgramFiles6432Folder">
+      <Directory Id="TarkovMonitorDir" Name="TarkovMonitor">
+        <Directory Id="ServiceDir"   Name="Service" />
+        <Directory Id="UIDir"        Name="UI" />
+        <Directory Id="DashboardDir" Name="Dashboard" />
+        <Directory Id="ToolsDir"     Name="Tools" />
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="TarkovMonitorMenuDir" Name="TarkovMonitor" />
+    </StandardDirectory>
+
+    <StandardDirectory Id="DesktopFolder" />
+
+  </Package>
+
+</Wix>

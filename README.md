@@ -36,11 +36,15 @@ TarkovMonitor is an Escape from Tarkov companion application that provides usefu
 
 ## Installation
 
-Head on over to the [latest release](https://github.com/the-hideout/TarkovMonitor/releases/latest) page for this project. Once you are there, you'll see an `Assets` section and you'll want to download the `TarkovMonitor.zip` link:
+Head on over to the [latest release](https://github.com/the-hideout/TarkovMonitor/releases/latest) page for this project. Download the `TarkovMonitor-<version>.msi` installer from the Assets section and run it.
 
-<img width="845" alt="Screenshot 2023-08-10 at 7 58 36 PM" src="https://github.com/the-hideout/TarkovMonitor/assets/23362539/86fbb000-25a3-4d71-bf39-45d622d61e8e">
+The installer will:
+- Install the **TarkovMonitor Windows Service**, which monitors your EFT log files in the background (even when the UI is closed).
+- Install the **TarkovMonitor UI**, which connects to the service and displays notifications and stats.
+- Add a firewall rule allowing the service to accept local connections on port 50051.
+- Create Start Menu and Desktop shortcuts.
 
-Once downloaded, extract the zip and run the `TarkovMonitor.exe` executable included within the bundle. Enjoy!
+After installation, launch **TarkovMonitor** from the Start Menu or Desktop shortcut. The service starts automatically with Windows.
 
 ## Setup
 

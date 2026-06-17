@@ -63,23 +63,49 @@ public class GameEventBroadcasterService : TarkovMonitorService.TarkovMonitorSer
         }
     }
 
+    /// <summary>
+    /// Returns the current service configuration to the caller.
+    /// Reloads from disk first so the caller always sees the latest persisted values.
+    /// </summary>
     public override async Task<ServiceConfig> GetConfig(GetConfigRequest request, ServerCallContext context)
     {
         await _config.LoadAsync();
-        return new ServiceConfig
+        var response = new ServiceConfig
         {
-            CustomLogsPath = _config.CustomLogsPath ?? "",
-            TarkovTrackerToken = _config.TarkovTrackerToken ?? "",
-            TarkovTrackerEnabled = _config.TarkovTrackerEnabled
+            CustomLogsPath       = _config.CustomLogsPath ?? "",
+            CustomMap            = _config.CustomMap ?? "",
+            TarkovTrackerEnabled = _config.TarkovTrackerEnabled,
         };
+        foreach (var kvp in _config.TarkovTrackerTokens)
+            response.TarkovTrackerTokens[kvp.Key] = kvp.Value;
+        foreach (var kvp in _config.TarkovTrackerDomains)
+            response.TarkovTrackerDomains[kvp.Key] = kvp.Value;
+        return response;
     }
 
+    /// <summary>
+    /// Applies configuration changes received from a client and persists them to disk.
+    /// Also applies the custom logs path to the running GameWatcher immediately so a restart
+    /// is not required.
+    /// </summary>
     public override async Task<UpdateConfigResponse> UpdateConfig(UpdateConfigRequest request, ServerCallContext context)
     {
         try
         {
             _config.CustomLogsPath = request.CustomLogsPath;
-            _config.TarkovTrackerToken = request.TarkovTrackerToken;
+
+            // CustomMap is always written (empty string = clear the fallback).
+            _config.CustomMap      = request.CustomMap;
+            _gameWatcher.CustomMap = string.IsNullOrEmpty(request.CustomMap) ? null : request.CustomMap;
+
+            // Merge token map: the client sends only the keys it wants to change
+            foreach (var kvp in request.TarkovTrackerTokens)
+                _config.TarkovTrackerTokens[kvp.Key] = kvp.Value;
+
+            // Merge domain map: same partial-update semantics as tokens
+            foreach (var kvp in request.TarkovTrackerDomains)
+                _config.TarkovTrackerDomains[kvp.Key] = kvp.Value;
+
             await _config.SaveAsync();
 
             if (!string.IsNullOrEmpty(request.CustomLogsPath))
@@ -163,7 +189,9 @@ public class GameEventBroadcasterService : TarkovMonitorService.TarkovMonitorSer
                 ["buyer"] = args.LogContent.Buyer,
                 ["soldItemId"] = args.LogContent.SoldItemId,
                 ["soldItemCount"] = args.LogContent.SoldItemCount.ToString(),
-                ["receivedItemsJson"] = JsonSerializer.Serialize(args.LogContent.ReceivedItems),
+                // Use source-gen context to keep serialization AOT-safe
+                ["receivedItemsJson"] = JsonSerializer.Serialize(
+                    args.LogContent.ReceivedItems, CoreJsonContext.Default.DictionaryStringInt32),
                 ["profileId"] = args.Profile.Id
             });
         };
@@ -287,7 +315,9 @@ public class GameEventBroadcasterService : TarkovMonitorService.TarkovMonitorSer
         data["raidType"] = args.RaidInfo.RaidType.ToString();
         data["reconnected"] = args.RaidInfo.Reconnected.ToString();
         data["queueTime"] = args.RaidInfo.QueueTime.ToString(CultureInfo.InvariantCulture);
-        data["screenshotsJson"] = JsonSerializer.Serialize(args.RaidInfo.Screenshots);
+        // Use source-gen context for AOT-safe serialization
+        data["screenshotsJson"] = JsonSerializer.Serialize(
+            args.RaidInfo.Screenshots, CoreJsonContext.Default.ListString);
         if (args.RaidInfo.StartingTime.HasValue)
             data["startingTimeMs"] = new DateTimeOffset(args.RaidInfo.StartingTime.Value).ToUnixTimeMilliseconds().ToString();
         if (args.RaidInfo.StartedTime.HasValue)

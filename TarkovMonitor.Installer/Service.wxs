@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:fire="http://wixtoolset.org/schemas/v4/wxs/firewall">
+
+  <!--
+    Service registration, control, and firewall rule.
+
+    TarkovMonitor.Service.exe is the KeyPath of the ServiceConfig component so
+    that the Windows Installer InstallServices action can derive the correct
+    service binary path. The exe is therefore excluded from Service_harvest.wxs
+    (see Build-Installer.ps1 -ExcludeFiles). All other service files are
+    harvested normally into ServiceFileComponents.
+
+    Service account: LocalSystem
+      LocalSystem can read EFT log files (game install dir, world-readable)
+      and read/write the service install dir. Users requiring a least-privilege
+      account can re-configure post-install using the management scripts in the
+      Tools feature (see FeatureTools).
+
+    Firewall rule: Private profile, local subnet scope.
+      This allows LAN clients to connect. Users who want localhost-only can
+      remove the rule or adjust it in Windows Defender Firewall.
+      The management scripts (Install-TarkovMonitorService.ps1) expose
+      -ListenMode and -FirewallRemoteAddress for fine-grained control.
+  -->
+
+  <Fragment>
+    <ComponentGroup Id="ServiceRegistration" Directory="ServiceDir">
+
+      <Component Id="ServiceConfig">
+        <!--
+          The service EXE must be the KeyPath. Windows Installer's InstallServices
+          action uses the component's key file as the registered service binary path.
+          A registry-value KeyPath would result in a blank binary path and error 1920.
+        -->
+        <File Id="TarkovMonitorServiceExe"
+              Source="..\publish\Service\TarkovMonitor.Service.exe"
+              KeyPath="yes" />
+
+        <ServiceInstall
+          Id="TarkovMonitorServiceInstall"
+          Name="TarkovMonitorService"
+          DisplayName="TarkovMonitor Service"
+          Description="Monitors Escape from Tarkov log files and broadcasts game events over gRPC."
+          Type="ownProcess"
+          Start="auto"
+          Account="LocalSystem"
+          ErrorControl="normal" />
+
+        <ServiceControl
+          Id="TarkovMonitorServiceControl"
+          Name="TarkovMonitorService"
+          Start="install"
+          Stop="both"
+          Remove="uninstall"
+          Wait="yes" />
+
+        <!--
+          Firewall exception: inbound TCP 50051, Private profile, local subnet.
+          WiX Firewall extension automatically removes this rule on uninstall.
+        -->
+        <fire:FirewallException
+          Id="GrpcFirewallRule"
+          Name="TarkovMonitor gRPC"
+          Port="50051"
+          Protocol="tcp"
+          Profile="private"
+          Scope="localSubnet" />
+
+      </Component>
+
+    </ComponentGroup>
+  </Fragment>
+
+</Wix>

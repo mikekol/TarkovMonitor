@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <Fragment>
+
+    <!--
+      Start Menu shortcut that opens an elevated PowerShell session in the Tools directory.
+      The scripts themselves enforce #Requires -RunAsAdministrator, so the UAC prompt
+      appears when the user runs a script. This shortcut just provides a convenient
+      starting point.
+    -->
+    <Component Id="ToolsShortcut" Directory="TarkovMonitorMenuDir">
+      <Shortcut
+        Id="ToolsMenuShortcut"
+        Name="TarkovMonitor Management"
+        Description="Open PowerShell in the TarkovMonitor Tools directory"
+        Target="[System64Folder]WindowsPowerShell\v1.0\powershell.exe"
+        Arguments="-ExecutionPolicy Bypass -NoExit -Command &quot;Set-Location '[ToolsDir]'; Write-Host 'TarkovMonitor Management Tools' -ForegroundColor Cyan; Write-Host 'Available scripts:'; Get-ChildItem *.ps1 | Select-Object -ExpandProperty Name&quot;"
+        WorkingDirectory="ToolsDir" />
+      <RemoveFolder Id="RemoveToolsMenuDir" Directory="TarkovMonitorMenuDir" On="uninstall" />
+      <RegistryValue Root="HKCU"
+        Key="SOFTWARE\TarkovMonitor\Tools"
+        Name="StartMenuShortcut"
+        Type="integer"
+        Value="1"
+        KeyPath="yes" />
+    </Component>
+
+  </Fragment>
+
+</Wix>

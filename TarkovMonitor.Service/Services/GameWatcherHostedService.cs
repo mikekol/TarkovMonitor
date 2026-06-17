@@ -27,6 +27,9 @@ public class GameWatcherHostedService : BackgroundService
             if (!string.IsNullOrEmpty(_config.CustomLogsPath))
                 _gameWatcher.LogsPath = _config.CustomLogsPath;
 
+            // Apply the custom map fallback — used when a screenshot is taken outside an active raid.
+            _gameWatcher.CustomMap = _config.CustomMap;
+
             _gameWatcher.Start();
             _logger.LogInformation("GameWatcher started, logs path: {LogsPath}", _gameWatcher.LogsPath);
         }

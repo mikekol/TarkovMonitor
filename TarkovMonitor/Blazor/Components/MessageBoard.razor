@@ -143,7 +143,7 @@
         }
         Snackbar.Add(e.Message.Message, severity, config =>
         {
-            config.Onclick = snackbar =>
+            config.OnClick = snackbar =>
             {
                 NavManager.NavigateTo("/");
                 return Task.CompletedTask;
@@ -160,7 +160,7 @@
                 button.OnClick?.Invoke();
                 return;
             }
-            bool? result = await DialogService.ShowMessageBox(
+            bool? result = await DialogService.ShowMessageBoxAsync(
                 button.Confirm.Title,
                 (MarkupString) button.Confirm.Message,
                 yesText: button.Confirm.YesText, 

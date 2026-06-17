@@ -131,19 +131,54 @@ namespace TarkovMonitor
                 if (e.PropertyName == "stayOnTop")
                     this.TopMost = Properties.Settings.Default.stayOnTop;
 
-                if (e.PropertyName == "customLogsPath")
+                if (e.PropertyName == "customLogsPath" || e.PropertyName == "customMap")
                 {
                     _ = Task.Run(async () =>
                     {
                         try
                         {
-                            var config = await _gameClient.GetConfigAsync();
                             await _gameClient.UpdateConfigAsync(
                                 Properties.Settings.Default.customLogsPath,
-                                config.TarkovTrackerToken);
+                                Properties.Settings.Default.customMap);
                         }
                         catch { }
                     });
+                }
+
+                if (e.PropertyName == "tarkovTrackerTokens")
+                {
+                    var tokens = TarkovTracker.AllTokens;
+                    if (tokens.Count > 0)
+                    {
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                await _gameClient.UpdateConfigAsync(
+                                    Properties.Settings.Default.customLogsPath,
+                                    tarkovTrackerTokens: new Dictionary<string, string>(tokens));
+                            }
+                            catch { }
+                        });
+                    }
+                }
+
+                if (e.PropertyName == "tarkovTrackerDomains")
+                {
+                    var domains = TarkovTracker.AllProfileDomains;
+                    if (domains.Count > 0)
+                    {
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                await _gameClient.UpdateConfigAsync(
+                                    Properties.Settings.Default.customLogsPath,
+                                    tarkovTrackerDomains: new Dictionary<string, string>(domains));
+                            }
+                            catch { }
+                        });
+                    }
                 }
             };
 
@@ -219,7 +254,7 @@ namespace TarkovMonitor
             GameWatcher.CurrentProfile = e.Profile;
             if (e.Profile.Id == TarkovTracker.CurrentProfileId) return;
             messageLog.AddMessage(string.Format(localizationService.GetString("UsingProfile"), e.Profile.Type));
-            TarkovTracker.SetProfile(e.Profile.Id);
+            _ = TarkovTracker.SetProfile(e.Profile.Id);
         }
 
         private void Eft_ExitedPostRaidMenus(object? sender, RaidInfoEventArgs e)
@@ -390,7 +425,7 @@ namespace TarkovMonitor
 
         private void TarkovTracker_ProgressRetrieved(object? sender, EventArgs e)
         {
-            messageLog.AddMessage(string.Format(localizationService.GetString("RetrievedDataFromTarkovTracker"), TarkovTracker.Progress.data.displayName, TarkovTracker.Progress.data.playerLevel, TarkovTracker.Progress.data.pmcFaction), "update", $"https://{Properties.Settings.Default.tarkovTrackerDomain}");
+            messageLog.AddMessage(string.Format(localizationService.GetString("RetrievedDataFromTarkovTracker"), TarkovTracker.Progress.data.displayName, TarkovTracker.Progress.data.playerLevel, TarkovTracker.Progress.data.pmcFaction), "update", $"https://{TarkovTracker.GetDomain(GameWatcher.CurrentProfile.Id)}");
         }
 
         private void WebView_CoreWebView2InitializationCompleted(object? sender, CoreWebView2InitializationCompletedEventArgs e)
@@ -413,15 +448,12 @@ namespace TarkovMonitor
 
         private async Task InitializeProgress()
         {
-            try
-            {
-                await TarkovTracker.SetProfile(GameWatcher.CurrentProfile.Id);
-            }
-            catch (Exception ex)
-            {
-                messageLog.AddMessage($"Error retrieving Tarkov Tracker profile: {ex.Message}");
+            // Profile ID is empty until EFT starts — silently skip until it's available.
+            if (string.IsNullOrEmpty(GameWatcher.CurrentProfile.Id))
                 return;
-            }
+
+            await TarkovTracker.SetProfile(GameWatcher.CurrentProfile.Id);
+
             messageLog.AddMessage(string.Format(localizationService.GetString("UsingProfile"), GameWatcher.CurrentProfile.Type));
             if (TarkovTracker.GetToken(GameWatcher.CurrentProfile.Id) == "")
             {
@@ -453,52 +485,29 @@ namespace TarkovMonitor
             }
         }
 
-        private async void Eft_TaskFinished(object? sender, TaskEventArgs e)
+        private void Eft_TaskFinished(object? sender, TaskEventArgs e)
         {
             var task = TarkovDev.Tasks.Find(t => t.id == e.TaskId);
             if (task == null) return;
             messageLog.AddMessage($"Completed task {task.name}", "quest", $"https://tarkov.dev/task/{task.normalizedName}");
-            if (!TarkovTracker.ValidToken) return;
-            try
-            {
-                await TarkovTracker.SetTaskComplete(task.id);
-            }
-            catch (Exception ex)
-            {
-                messageLog.AddMessage($"Error updating Tarkov Tracker task progression: {ex.Message}", "exception");
-            }
+            // TarkovTracker API update is now handled server-side by TarkovTrackerUpdaterService;
+            // the Service receives the same TaskFinished event and calls the API even when the UI is closed.
         }
 
-        private async void Eft_TaskFailed(object? sender, TaskEventArgs e)
+        private void Eft_TaskFailed(object? sender, TaskEventArgs e)
         {
             var task = TarkovDev.Tasks.Find(t => t.id == e.TaskId);
             if (task == null) return;
             messageLog.AddMessage($"Failed task {task.name}", "quest", $"https://tarkov.dev/task/{task.normalizedName}");
-            if (!TarkovTracker.ValidToken) return;
-            try
-            {
-                await TarkovTracker.SetTaskFailed(task.id);
-            }
-            catch (Exception ex)
-            {
-                messageLog.AddMessage($"Error updating Tarkov Tracker task progression: {ex.Message}", "exception");
-            }
+            // TarkovTracker API update handled server-side by TarkovTrackerUpdaterService.
         }
 
-        private async void Eft_TaskStarted(object? sender, TaskEventArgs e)
+        private void Eft_TaskStarted(object? sender, TaskEventArgs e)
         {
             var task = TarkovDev.Tasks.Find(t => t.id == e.TaskId);
             if (task == null) return;
             messageLog.AddMessage($"Started task {task.name}", "quest", $"https://tarkov.dev/task/{task.normalizedName}");
-            if (!TarkovTracker.ValidToken) return;
-            try
-            {
-                await TarkovTracker.SetTaskStarted(e.TaskId);
-            }
-            catch (Exception ex)
-            {
-                messageLog.AddMessage($"Error updating Tarkov Tracker task progression: {ex.Message}", "exception");
-            }
+            // TarkovTracker API update handled server-side by TarkovTrackerUpdaterService.
         }
 
         private void Eft_FleaSold(object? sender, FleaSaleEventArgs e)

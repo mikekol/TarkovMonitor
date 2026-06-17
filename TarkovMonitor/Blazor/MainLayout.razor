@@ -1,6 +1,7 @@
 ﻿@inherits LayoutComponentBase
 @inject IJSRuntime JSRuntime;
-<MudThemeProvider Theme="currentTheme"/>
+<MudThemeProvider Theme="currentTheme" IsDarkMode="true"/>
+<MudPopoverProvider/>
 <MudDialogProvider/>
 <MudSnackbarProvider/>
 
@@ -19,11 +20,11 @@
 
 	MudTheme defaultTheme = new()
 	{
-		Palette = new PaletteLight()
+		PaletteLight = new PaletteLight()
 		{
 			Black = "#27272f",
 			Background = "#c7c5b3",
-			BackgroundGrey = "#27272f",
+			BackgroundGray = "#27272f",
 			Surface = "#373740",
 			DrawerBackground = "#2f2f2d",
 			DrawerText = "rgba(255,255,255, 0.50)",
@@ -48,11 +49,11 @@
 
 	MudTheme darkTheme = new()
 	{
-		Palette = new PaletteDark()
+		PaletteDark = new PaletteDark()
 		{
 			Black = "#27272f",
 			Background = "#c7c5b3",
-			BackgroundGrey = "#27272f",
+			BackgroundGray = "#27272f",
 			Surface = "#1e1e1e",
 			DrawerBackground = "#2f2f2d",
 			DrawerText = "rgba(255,255,255, 0.50)",

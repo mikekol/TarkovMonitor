@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Fragment>
+    <DirectoryRef Id="ServiceDir">
+      <Component Id="c_svc_D3CEFFCF" Guid="*">
+        <File Source="..\publish\Service\appsettings.json" />
+      </Component>
+      <Component Id="c_svc_F0B8429F" Guid="*">
+        <File Source="..\publish\Service\TarkovMonitor.Core.pdb" />
+      </Component>
+      <Component Id="c_svc_EEA10395" Guid="*">
+        <File Source="..\publish\Service\TarkovMonitor.Service.Contracts.pdb" />
+      </Component>
+      <Component Id="c_svc_16426034" Guid="*">
+        <File Source="..\publish\Service\TarkovMonitor.Service.pdb" />
+      </Component>
+      <Component Id="c_svc_7AE1D6DA" Guid="*">
+        <File Source="..\publish\Service\web.config" />
+      </Component>
+    </DirectoryRef>
+    <ComponentGroup Id="ServiceFileComponents">
+      <ComponentRef Id="c_svc_D3CEFFCF" />
+      <ComponentRef Id="c_svc_F0B8429F" />
+      <ComponentRef Id="c_svc_EEA10395" />
+      <ComponentRef Id="c_svc_16426034" />
+      <ComponentRef Id="c_svc_7AE1D6DA" />
+    </ComponentGroup>
+  </Fragment>
+</Wix>

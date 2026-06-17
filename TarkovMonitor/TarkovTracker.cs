@@ -41,18 +41,54 @@ namespace TarkovMonitor
         public static event EventHandler<EventArgs>? TokenValidated;
         public static event EventHandler<EventArgs>? TokenInvalid;
         public static event EventHandler<EventArgs>? ProgressRetrieved;
+
+        /// <summary>Display names for the selectable TarkovTracker service hosts.</summary>
         public static Dictionary<string, string> Domains = new() {
             { "tarkovtracker.io", "TarkovTracker.io" },
             { "tarkovtracker.org", "TarkovTracker.org" },
         };
 
+        /// <summary>Per-profile host override keyed by EFT profile ID.</summary>
+        private static Dictionary<string, string> _profileDomains = new();
+
         static TarkovTracker() {
             tokens = JsonSerializer.Deserialize<Dictionary<string, string>>(Properties.Settings.Default.tarkovTrackerTokens) ?? tokens;
+            _profileDomains = JsonSerializer.Deserialize<Dictionary<string, string>>(Properties.Settings.Default.tarkovTrackerDomains) ?? _profileDomains;
         }
 
+        /// <summary>
+        /// Returns the TarkovTracker domain for <paramref name="profileId"/>, defaulting to
+        /// <c>tarkovtracker.io</c> when no override has been stored.
+        /// </summary>
+        public static string GetDomain(string profileId) =>
+            _profileDomains.TryGetValue(profileId, out var d) && !string.IsNullOrEmpty(d)
+                ? d : "tarkovtracker.io";
+
+        /// <summary>
+        /// Stores a domain override for <paramref name="profileId"/> and persists it to
+        /// <see cref="Properties.Settings.Default.tarkovTrackerDomains"/>.
+        /// Reinitialises the API client when the override affects the currently active profile.
+        /// </summary>
+        public static void SetDomain(string profileId, string domain)
+        {
+            _profileDomains[profileId] = domain;
+            Properties.Settings.Default.tarkovTrackerDomains = JsonSerializer.Serialize(_profileDomains);
+            Properties.Settings.Default.Save();
+            if (profileId == currentProfile)
+                InitAPI();
+        }
+
+        /// <summary>Read-only snapshot of all stored per-profile domain overrides.</summary>
+        public static IReadOnlyDictionary<string, string> AllProfileDomains => _profileDomains;
+
+        /// <summary>
+        /// (Re)initialises the Refit API client using the domain configured for the currently
+        /// active profile.  Call this when the active profile changes or its domain is updated.
+        /// </summary>
         public static ITarkovTrackerAPI InitAPI()
         {
-            api = RestService.For<ITarkovTrackerAPI>($"https://{Properties.Settings.Default.tarkovTrackerDomain}/api/v2",
+            var domain = GetDomain(currentProfile);
+            api = RestService.For<ITarkovTrackerAPI>($"https://{domain}/api/v2",
                 new RefitSettings {
                     AuthorizationHeaderValueGetter = (rq, cr) => {
                         return Task.Run<string>(() => {
@@ -65,14 +101,11 @@ namespace TarkovMonitor
             return api;
         }
 
-        public static string GetToken(string profileId)
-        {
-            if (!tokens.ContainsKey(profileId))
-            {
-                return "";
-            }
-            return tokens[profileId];
-        }
+        /// <summary>Read-only snapshot of all stored per-profile tokens.</summary>
+        public static IReadOnlyDictionary<string, string> AllTokens => tokens;
+
+        public static string GetToken(string profileId) =>
+            tokens.TryGetValue(profileId, out var t) ? t : "";
 
         public static void SetToken(string profileId, string token)
         {
@@ -87,21 +120,29 @@ namespace TarkovMonitor
 
         public static async Task<ProgressResponse> SetProfile(string profileId)
         {
-            if (profileId == "") {
-                throw new Exception("Can't set PVP or PVE profile, please launch Escape from Tarkov and then restart this application");
-            }
+            if (profileId == "")
+                return Progress; // EFT hasn't provided a profile yet — not an error, just not ready
+
+            // One-time migration: if this profile has no domain stored yet but the legacy
+            // single-string setting has a value, seed the per-profile entry from it.
+            if (!_profileDomains.ContainsKey(profileId) && !string.IsNullOrEmpty(Properties.Settings.Default.tarkovTrackerDomain))
+                SetDomain(profileId, Properties.Settings.Default.tarkovTrackerDomain);
 
             if (currentProfile == profileId)
-            {
                 return Progress;
-            }
-            var newToken = GetToken(profileId);
-            var oldToken = GetToken(currentProfile);
+
+            var oldDomain = GetDomain(currentProfile);
+            var newToken  = GetToken(profileId);
+            var oldToken  = GetToken(currentProfile);
             currentProfile = profileId;
+
+            // Reinit the API client when switching to a profile that uses a different domain.
+            if (GetDomain(profileId) != oldDomain)
+                InitAPI();
+
             if (oldToken == newToken)
-            {
                 return Progress;
-            }
+
             if (newToken == "" || newToken.Length != 22)
             {
                 ValidToken = false;

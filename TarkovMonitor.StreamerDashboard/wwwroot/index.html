@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tarkov Stream Overlay</title>
+  <link rel="stylesheet" href="overlay.css">
+</head>
+<body>
+
+  <!-- Persistent HUD — shown only while in a raid -->
+  <div id="hud" class="hud hidden">
+    <div class="hud-map" id="hud-map">—</div>
+    <div class="hud-badges">
+      <span class="badge badge-gametype" id="badge-gametype"></span>
+      <span class="badge badge-raidtype" id="badge-raidtype"></span>
+    </div>
+    <div class="hud-timer" id="hud-timer">00:00</div>
+  </div>
+
+  <!-- Pop-up notification zone (top-right) -->
+  <div id="popup-zone"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@8/dist/browser/signalr.min.js"></script>
+  <script src="overlay.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Fragment>
+    <DirectoryRef Id="ToolsDir">
+      <Component Id="c_tools_68E1268B" Guid="*">
+        <File Source="..\publish\Tools\Install-TarkovMonitorService.ps1" />
+      </Component>
+      <Component Id="c_tools_9ED88600" Guid="*">
+        <File Source="..\publish\Tools\Uninstall-TarkovMonitorService.ps1" />
+      </Component>
+    </DirectoryRef>
+    <ComponentGroup Id="ToolsFileComponents">
+      <ComponentRef Id="c_tools_68E1268B" />
+      <ComponentRef Id="c_tools_9ED88600" />
+    </ComponentGroup>
+  </Fragment>
+</Wix>

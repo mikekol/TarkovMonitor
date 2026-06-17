@@ -68,6 +68,9 @@
     <Setting Name="tarkovTrackerTokens" Type="System.String" Scope="User">
       <Value Profile="(Default)">{}</Value>
     </Setting>
+    <Setting Name="tarkovTrackerDomains" Type="System.String" Scope="User">
+      <Value Profile="(Default)">{}</Value>
+    </Setting>
     <Setting Name="runthroughTime" Type="System.TimeSpan" Scope="User">
       <Value Profile="(Default)">00:07:10</Value>
     </Setting>

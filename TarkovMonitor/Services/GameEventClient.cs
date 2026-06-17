@@ -300,14 +300,43 @@ public class GameEventClient : IAsyncDisposable
         return await _grpcClient.GetConfigAsync(new GetConfigRequest());
     }
 
-    public async Task UpdateConfigAsync(string customLogsPath, string tarkovTrackerToken)
+    /// <summary>
+    /// Pushes a configuration update to the service.  Pass only the values you want to change;
+    /// the service merges the token map (it does not replace all tokens on every call).
+    /// </summary>
+    /// <param name="customLogsPath">New EFT logs folder path, or empty string to leave unchanged.</param>
+    /// <param name="customMap">
+    /// Fallback map name for screenshot detection when no active raid is in progress.
+    /// Pass empty string to clear the override.
+    /// </param>
+    /// <param name="tarkovTrackerTokens">
+    /// Per-profile token changes to merge into the service config, keyed by EFT profile ID.
+    /// Pass <see langword="null"/> or an empty dictionary to leave tokens unchanged.
+    /// </param>
+    /// <param name="tarkovTrackerDomains">
+    /// Per-profile domain overrides to merge into the service config, keyed by EFT profile ID.
+    /// Pass <see langword="null"/> or an empty dictionary to leave domains unchanged.
+    /// </param>
+    public async Task UpdateConfigAsync(
+        string customLogsPath,
+        string customMap = "",
+        Dictionary<string, string>? tarkovTrackerTokens = null,
+        Dictionary<string, string>? tarkovTrackerDomains = null)
     {
         if (_grpcClient == null) throw new InvalidOperationException("Not connected");
-        var response = await _grpcClient.UpdateConfigAsync(new UpdateConfigRequest
+        var request = new UpdateConfigRequest
         {
             CustomLogsPath = customLogsPath,
-            TarkovTrackerToken = tarkovTrackerToken
-        });
+            CustomMap      = customMap,
+        };
+        if (tarkovTrackerTokens != null)
+            foreach (var kvp in tarkovTrackerTokens)
+                request.TarkovTrackerTokens[kvp.Key] = kvp.Value;
+        if (tarkovTrackerDomains != null)
+            foreach (var kvp in tarkovTrackerDomains)
+                request.TarkovTrackerDomains[kvp.Key] = kvp.Value;
+
+        var response = await _grpcClient.UpdateConfigAsync(request);
         if (!response.Success)
             throw new InvalidOperationException($"Failed to update config: {response.ErrorMessage}");
     }

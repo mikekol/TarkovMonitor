@@ -17,7 +17,10 @@ namespace TarkovMonitor
 			{
 				splashTime = 1;
 			}
-			Application.Run(new Splash(TarkovMonitor.Properties.Resources.tarkov_dev_logo, splashTime));
+			if (splashTime > 1)
+			{
+				Application.Run(new Splash(TarkovMonitor.Properties.Resources.tarkov_dev_logo, splashTime));
+			}
 			Application.Run(new MainBlazorUI());
         }
     }

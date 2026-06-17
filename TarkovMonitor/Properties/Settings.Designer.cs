@@ -286,7 +286,19 @@ namespace TarkovMonitor.Properties {
                 this["tarkovTrackerTokens"] = value;
             }
         }
-        
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("{}")]
+        public string tarkovTrackerDomains {
+            get {
+                return ((string)(this["tarkovTrackerDomains"]));
+            }
+            set {
+                this["tarkovTrackerDomains"] = value;
+            }
+        }
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("00:07:10")]

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <Fragment>
+
+    <!-- Start Menu shortcut for the UI -->
+    <Component Id="UIStartMenuShortcut" Directory="TarkovMonitorMenuDir">
+      <Shortcut
+        Id="UIMenuShortcut"
+        Name="TarkovMonitor"
+        Description="Escape from Tarkov monitoring and overlay"
+        Target="[UIDir]TarkovMonitor.exe"
+        WorkingDirectory="UIDir"
+        Icon="TarkovMonitorIcon" />
+      <RemoveFolder Id="RemoveUIMenuDir" Directory="TarkovMonitorMenuDir" On="uninstall" />
+      <RegistryValue Root="HKCU"
+        Key="SOFTWARE\TarkovMonitor\UI"
+        Name="StartMenuShortcut"
+        Type="integer"
+        Value="1"
+        KeyPath="yes" />
+    </Component>
+
+    <!-- Desktop shortcut for the UI -->
+    <Component Id="UIDesktopShortcut" Directory="DesktopFolder">
+      <Shortcut
+        Id="UIDesktopShortcutLink"
+        Name="TarkovMonitor"
+        Description="Escape from Tarkov monitoring and overlay"
+        Target="[UIDir]TarkovMonitor.exe"
+        WorkingDirectory="UIDir"
+        Icon="TarkovMonitorIcon" />
+      <RegistryValue Root="HKCU"
+        Key="SOFTWARE\TarkovMonitor\UI"
+        Name="DesktopShortcut"
+        Type="integer"
+        Value="1"
+        KeyPath="yes" />
+    </Component>
+
+  </Fragment>
+
+</Wix>

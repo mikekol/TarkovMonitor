@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <!--
+    Feature tree.
+
+    FeatureTools  — Required. Management PowerShell scripts, always installed.
+    FeatureService — Optional (default selected). The gRPC Windows service.
+    FeatureUI      — Optional (default selected). The TarkovMonitor desktop UI.
+    FeatureDashboard — Optional (default deselected). The streamer dashboard.
+
+    Level="1"  → installed by default (INSTALLLEVEL = 1)
+    Level="2"  → not installed by default
+    Absent="disallow" → cannot be deselected in the UI
+  -->
+
+  <Fragment>
+    <Feature Id="FeatureAll" Title="TarkovMonitor" Level="1">
+
+      <!--
+        Tools: Level="1" ensures it's selected by default. WiX 4 has no Absent="disallow"
+        equivalent on Feature; enforced instead by not showing it as an optional item in
+        the WixUI_FeatureTree dialog (achieved by Display="hidden" so it installs silently).
+      -->
+      <Feature Id="FeatureTools"
+        Title="Management Tools"
+        Description="PowerShell scripts for managing the TarkovMonitor service. Always installed."
+        Level="1"
+        Display="hidden">
+        <ComponentGroupRef Id="ToolsFileComponents" />
+        <ComponentRef Id="ToolsShortcut" />
+      </Feature>
+
+      <Feature Id="FeatureService"
+        Title="TarkovMonitor Service"
+        Description="Monitors Escape from Tarkov log files and broadcasts game events over gRPC. Install on the machine where EFT runs."
+        Level="1"
+        Display="expand">
+        <ComponentGroupRef Id="ServiceFileComponents" />
+        <ComponentGroupRef Id="ServiceRegistration" />
+      </Feature>
+
+      <Feature Id="FeatureUI"
+        Title="TarkovMonitor UI"
+        Description="The TarkovMonitor desktop interface. Can be installed on any machine on the same network as the service."
+        Level="1"
+        Display="expand">
+        <ComponentGroupRef Id="UIFileComponents" />
+        <ComponentRef Id="UIStartMenuShortcut" />
+        <ComponentRef Id="UIDesktopShortcut" />
+      </Feature>
+
+      <Feature Id="FeatureDashboard"
+        Title="Streamer Dashboard"
+        Description="WinUI streaming overlay dashboard. Requires the TarkovMonitor Service."
+        Level="2"
+        Display="expand">
+        <ComponentGroupRef Id="DashboardFileComponents" />
+        <ComponentRef Id="DashboardStartMenuShortcut" />
+      </Feature>
+
+    </Feature>
+  </Fragment>
+
+</Wix>

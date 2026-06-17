@@ -42,7 +42,7 @@
     </DialogActions>
 </MudDialog>
 @code {
-    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
 
     internal GameWatcher customWatcher = new();
     LogDetails? _selectedBreakpoint;

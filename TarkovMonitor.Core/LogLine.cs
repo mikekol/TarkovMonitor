@@ -1,4 +1,4 @@
-﻿namespace TarkovMonitor
+namespace TarkovMonitor
 {
     public class LogLine
     {

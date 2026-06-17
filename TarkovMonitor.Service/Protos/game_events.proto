@@ -1,4 +1,4 @@
-﻿syntax = "proto3";
+syntax = "proto3";
 
 option csharp_namespace = "TarkovMonitor.Service.Contracts";
 package tarkovmonitor.v1;
@@ -17,8 +17,12 @@ message SubscriptionRequest {
 message GetConfigRequest {}
 
 message UpdateConfigRequest {
- string custom_logs_path = 1;
- string tarkov_tracker_token = 2;
+ string custom_logs_path                    = 1;
+ string tarkov_tracker_token               = 2;  // deprecated
+ string tarkov_tracker_domain              = 3;  // deprecated: use tarkov_tracker_domains map
+ map<string, string> tarkov_tracker_tokens  = 4;
+ string custom_map                          = 5;  // fallback map name for screenshot detection when no active raid
+ map<string, string> tarkov_tracker_domains = 6;  // per-profile domain (profileId → domain)
 }
 
 message UpdateConfigResponse {
@@ -41,7 +45,11 @@ message GameEvent {
 }
 
 message ServiceConfig {
- string custom_logs_path = 1;
- string tarkov_tracker_token = 2;
- bool tarkov_tracker_enabled = 3;
+ string custom_logs_path                    = 1;
+ string tarkov_tracker_token               = 2;  // deprecated
+ bool   tarkov_tracker_enabled             = 3;
+ string tarkov_tracker_domain              = 4;  // deprecated: use tarkov_tracker_domains map
+ map<string, string> tarkov_tracker_tokens  = 5;
+ string custom_map                          = 6;  // fallback map name for screenshot detection when no active raid
+ map<string, string> tarkov_tracker_domains = 7;  // per-profile domain (profileId → domain)
 }

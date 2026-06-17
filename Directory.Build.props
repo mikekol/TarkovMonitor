@@ -5,5 +5,7 @@
         <Version>$(ProjectVersion)</Version>
         <AssemblyVersion>$(ProjectVersion)</AssemblyVersion>
         <FileVersion>$(ProjectVersion)</FileVersion>
+        <!-- Pre-compile hot paths to native code at publish time; zero code changes needed. -->
+        <PublishReadyToRun>true</PublishReadyToRun>
     </PropertyGroup>
 </Project>

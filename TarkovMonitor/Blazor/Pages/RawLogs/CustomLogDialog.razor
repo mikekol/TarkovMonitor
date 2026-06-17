@@ -1,4 +1,5 @@
-﻿@inject LocalizationService LocalizationService
+﻿@using MudBlazor
+@inject LocalizationService LocalizationService
 
 <MudDialog>
     <DialogContent>
@@ -16,7 +17,7 @@
     </DialogActions>
 </MudDialog>
 @code {
-    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
 
     void Cancel() => MudDialog.Cancel();
 

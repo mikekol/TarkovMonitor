@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using System.Diagnostics;
 using System.Text.Json.Nodes;
 using System.Text.Json;
@@ -18,18 +18,21 @@ namespace TarkovMonitor
         public static Profile CurrentProfile { get; set; } = new();
         public static bool ReadingPastLogs = false;
         public bool InitialLogsRead { get; private set; } = false;
-        public string LogsPath { 
+
+        /// <summary>
+        /// Gets or sets an optional override for the EFT Logs folder path.
+        /// When set, the value is used immediately and persisted by the caller (Service writes to
+        /// <see cref="RegistrySettings.CustomLogsPath"/>; the UI calls <c>UpdateConfigAsync</c>).
+        /// When <see langword="null"/> or empty, <see cref="GetDefaultLogsFolder"/> is used on first access.
+        /// </summary>
+        public string LogsPath {
             get
             {
                 if (_logsPath != "")
                 {
                     return _logsPath;
                 }
-                if (Properties.Settings.Default.customLogsPath != null && Properties.Settings.Default.customLogsPath != "")
-                {
-                    _logsPath = Properties.Settings.Default.customLogsPath;
-                    return _logsPath;
-                }
+                // No custom path override — detect from the EFT registry install key
                 try
                 {
                     _logsPath = GetDefaultLogsFolder();
@@ -65,7 +68,7 @@ namespace TarkovMonitor
                 }
                 catch { }
                 return "";
-                
+
             }
         }
         private readonly Dictionary<string, RaidInfo> Raids = new();
@@ -76,6 +79,14 @@ namespace TarkovMonitor
                 return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Escape From Tarkov", "Screenshots");
             }
         }
+
+        /// <summary>
+        /// Gets or sets an optional map name used when a screenshot is taken but no map is active in
+        /// <see cref="raidInfo"/>.  Set by the Service from its config; left <see langword="null"/> in
+        /// headless mode (the Service has no notion of a "current map" outside of an active raid).
+        /// Replaces the former <c>Properties.Settings.Default.customMap</c> reference.
+        /// </summary>
+        public string? CustomMap { get; set; }
 
         //private event EventHandler<NewLogEventArgs> NewLog;
         internal readonly Dictionary<GameLogType, LogMonitor> Monitors;
@@ -238,11 +249,14 @@ namespace TarkovMonitor
                     return;
                 }
                 var raid = raidInfo;
-                if ((raid.Map == null || raid.Map == "") && Properties.Settings.Default.customMap != "")
+                // Use CustomMap as a fallback when no map is recorded in the current raid.
+                // CustomMap is set externally (e.g. by a UI setting) rather than read from
+                // Properties.Settings — the Service has no WinForms settings infrastructure.
+                if ((raid.Map == null || raid.Map == "") && !string.IsNullOrEmpty(CustomMap))
                 {
                     raid = new()
                     {
-                        Map = Properties.Settings.Default.customMap,
+                        Map = CustomMap,
                     };
                 }
                 if (raid.Map == null)
@@ -337,7 +351,7 @@ namespace TarkovMonitor
                 //var logPattern = @"(?<date>^\d{4}-\d{2}-\d{2}) (?<time>\d{2}:\d{2}:\d{2}\.\d{3} [+-]\d{2}:\d{2})\|(?<logLevel>[^|]+)\|(?<logType>[^|]+)\|(?<message>.+$)\s*(?<json>^{[\s\S]+?^})?";
                 var logMessages = Regex.Matches(e.Data, logPattern, RegexOptions.Multiline);
 
-#if DEBUG                
+#if DEBUG
                 //Debug.WriteLine("===log chunk start===");
                 //Debug.WriteLine(e.Data);
                 //Debug.WriteLine("===log chunk end===");
@@ -389,7 +403,7 @@ namespace TarkovMonitor
                     {
                         if (!logMessage.Groups["json"].Success)
                         {
-                            continue;                            
+                            continue;
                         }
                         var node = JsonNode.Parse(logMessage.Groups["json"].Value);
                         if (node == null)
@@ -416,12 +430,12 @@ namespace TarkovMonitor
                     {
                         // GroupMatchInviteAccept occurs when someone you send an invite accepts
                         // GroupMatchInviteSend occurs when you receive an invite and either accept or decline
-                        GroupInviteAccept?.Invoke(this, new LogContentEventArgs<GroupLogContent>() { LogContent = jsonNode?.AsObject().Deserialize<GroupLogContent>() ?? throw new Exception("Error parsing GroupEventArgs"), Profile = CurrentProfile });
+                        GroupInviteAccept?.Invoke(this, new LogContentEventArgs<GroupLogContent>() { LogContent = jsonNode?.Deserialize<GroupLogContent>(CoreJsonContext.Default.GroupLogContent) ?? throw new Exception("Error parsing GroupEventArgs"), Profile = CurrentProfile });
                     }
                     if (eventLine.Contains("Got notification | GroupMatchUserLeave"))
                     {
                         // User left the group
-                        GroupUserLeave?.Invoke(this, new LogContentEventArgs<GroupMatchUserLeaveLogContent>() { LogContent = jsonNode?.AsObject().Deserialize<GroupMatchUserLeaveLogContent>() ?? throw new Exception("Error parsing GroupMatchUserLeaveEventArgs"), Profile = CurrentProfile });
+                        GroupUserLeave?.Invoke(this, new LogContentEventArgs<GroupMatchUserLeaveLogContent>() { LogContent = jsonNode?.Deserialize<GroupMatchUserLeaveLogContent>(CoreJsonContext.Default.GroupMatchUserLeaveLogContent) ?? throw new Exception("Error parsing GroupMatchUserLeaveEventArgs"), Profile = CurrentProfile });
                     }
 					if (eventLine.Contains("Got notification | GroupMatchWasRemoved"))
                     {
@@ -431,12 +445,12 @@ namespace TarkovMonitor
                     if (eventLine.Contains("Got notification | GroupMatchRaidSettings"))
                     {
                         // Occurs when group leader invites members to be ready
-                        GroupRaidSettings?.Invoke(this, new LogContentEventArgs<GroupRaidSettingsLogContent>() { LogContent = jsonNode?.AsObject().Deserialize<GroupRaidSettingsLogContent>() ?? throw new Exception("Error parsing GroupRaidSettingsEventArgs"), Profile = CurrentProfile });
+                        GroupRaidSettings?.Invoke(this, new LogContentEventArgs<GroupRaidSettingsLogContent>() { LogContent = jsonNode?.Deserialize<GroupRaidSettingsLogContent>(CoreJsonContext.Default.GroupRaidSettingsLogContent) ?? throw new Exception("Error parsing GroupRaidSettingsEventArgs"), Profile = CurrentProfile });
                     }
                     if (eventLine.Contains("Got notification | GroupMatchRaidReady"))
                     {
                         // Occurs for each other member of the group when ready
-                        GroupMemberReady?.Invoke(this, new LogContentEventArgs<GroupMatchRaidReadyLogContent>() { LogContent = jsonNode?.AsObject().Deserialize<GroupMatchRaidReadyLogContent>() ?? throw new Exception("Error parsing GroupMatchRaidReadyEventArgs"), Profile = CurrentProfile });
+                        GroupMemberReady?.Invoke(this, new LogContentEventArgs<GroupMatchRaidReadyLogContent>() { LogContent = jsonNode?.Deserialize<GroupMatchRaidReadyLogContent>(CoreJsonContext.Default.GroupMatchRaidReadyLogContent) ?? throw new Exception("Error parsing GroupMatchRaidReadyEventArgs"), Profile = CurrentProfile });
                     }
                     /*if (eventLine.Contains("application|Matching with group id"))
                     {
@@ -553,28 +567,29 @@ namespace TarkovMonitor
                     }
                     if (eventLine.Contains("Got notification | ChatMessageReceived"))
                     {
-                        var messageEvent = jsonNode?.AsObject().Deserialize<ChatMessageLogContent>() ?? throw new Exception("Error parsing ChatMessageLogContent");
+                        // Use source-gen context for all Deserialize calls to remain AOT-compatible.
+                        var messageEvent = jsonNode?.Deserialize<ChatMessageLogContent>(CoreJsonContext.Default.ChatMessageLogContent) ?? throw new Exception("Error parsing ChatMessageLogContent");
                         if (messageEvent.message.type == MessageType.PlayerMessage)
                         {
                             continue;
                         }
-                        var systemMessageEvent = jsonNode?.AsObject().Deserialize<SystemChatMessageLogContent>() ?? throw new Exception ("Error parsing SystemChatMessageLogContent");
+                        var systemMessageEvent = jsonNode?.Deserialize<SystemChatMessageLogContent>(CoreJsonContext.Default.SystemChatMessageLogContent) ?? throw new Exception ("Error parsing SystemChatMessageLogContent");
                         if (messageEvent.message.type == MessageType.FleaMarket)
 						{
 							if (systemMessageEvent.message.templateId == "5bdabfb886f7743e152e867e 0")
 							{
-								FleaSold?.Invoke(this, new LogContentEventArgs<FleaSoldMessageLogContent>() { LogContent = jsonNode?.AsObject().Deserialize<FleaSoldMessageLogContent>() ?? throw new Exception("Error parsing FleaSoldMessageLogContent"), Profile = CurrentProfile });
+								FleaSold?.Invoke(this, new LogContentEventArgs<FleaSoldMessageLogContent>() { LogContent = jsonNode?.Deserialize<FleaSoldMessageLogContent>(CoreJsonContext.Default.FleaSoldMessageLogContent) ?? throw new Exception("Error parsing FleaSoldMessageLogContent"), Profile = CurrentProfile });
 								continue;
 							}
 							if (systemMessageEvent.message.templateId == "5bdabfe486f7743e1665df6e 0")
 							{
-								FleaOfferExpired?.Invoke(this, new LogContentEventArgs<FleaExpiredMessageLogContent>() { LogContent = jsonNode?.AsObject().Deserialize<FleaExpiredMessageLogContent>() ?? throw new Exception("Error parsing FleaExpiredMessageLogContent"), Profile = CurrentProfile });
+								FleaOfferExpired?.Invoke(this, new LogContentEventArgs<FleaExpiredMessageLogContent>() { LogContent = jsonNode?.Deserialize<FleaExpiredMessageLogContent>(CoreJsonContext.Default.FleaExpiredMessageLogContent) ?? throw new Exception("Error parsing FleaExpiredMessageLogContent"), Profile = CurrentProfile });
 								continue;
 							}
 						}
                         if (systemMessageEvent.message.type >= MessageType.TaskStarted && systemMessageEvent.message.type <= MessageType.TaskFinished)
                         {
-                            var args = jsonNode?.AsObject().Deserialize<TaskStatusMessageLogContent>() ?? throw new Exception("Error parsing TaskStatusMessageLogContent");
+                            var args = jsonNode?.Deserialize<TaskStatusMessageLogContent>(CoreJsonContext.Default.TaskStatusMessageLogContent) ?? throw new Exception("Error parsing TaskStatusMessageLogContent");
                             TaskModified?.Invoke(this, new LogContentEventArgs<TaskStatusMessageLogContent>() { LogContent = args, Profile = CurrentProfile });
                             if (args.Status == TaskStatus.Started)
                             {
@@ -964,7 +979,7 @@ namespace TarkovMonitor
         public float QueueTime { get; set; }
         public bool Reconnected { get; set; }
         public Profile Profile { get; set; }
-        public RaidType RaidType { 
+        public RaidType RaidType {
             get
             {
                 if (this.Profile.Type == ProfileType.PVE)
