@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+
+  <!--
+    Detects the EFT install path at install time and patches the service's
+    appsettings.json with the correct CustomLogsPath.  This eliminates the need
+    for the service to read the registry at runtime, allowing it to run under
+    LocalService or NetworkService without elevated privileges.
+
+    The custom action uses Windows PowerShell 5.1 (always present on supported
+    Windows versions) via WixQuietExec.  ExecutionPolicy does not apply because
+    the code is passed inline via -Command, not as a script file.
+  -->
+
+  <Fragment>
+
+    <!-- Detect EFT install location from the Uninstall registry keys -->
+    <Property Id="EFT_INSTALL_PATH">
+      <RegistrySearch Root="HKLM"
+        Key="SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\EscapeFromTarkov"
+        Name="InstallLocation" Type="raw" />
+    </Property>
+    <Property Id="EFT_INSTALL_PATH_STEAM">
+      <RegistrySearch Root="HKLM"
+        Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 3932890"
+        Name="InstallLocation" Type="raw" />
+    </Property>
+
+    <!-- Resolve: prefer BSG launcher key, fall back to Steam key -->
+    <SetProperty Id="EFT_INSTALL_PATH" Value="[EFT_INSTALL_PATH_STEAM]"
+                 Sequence="first" After="AppSearch"
+                 Condition="NOT EFT_INSTALL_PATH AND EFT_INSTALL_PATH_STEAM" />
+
+    <!-- Build the PowerShell command line.  This is a deferred custom action
+         (runs elevated in the InstallExecuteSequence) because it writes to
+         Program Files.  WixQuietExec requires the command in a property named
+         after the custom action with a "Cmd" suffix (WiX 4 convention). -->
+    <SetProperty Id="PatchAppSettingsCmd" Value="&quot;powershell.exe&quot; -NoProfile -NonInteractive -Command &quot;$f = Join-Path '[ServiceDir]' 'appsettings.json'; $j = Get-Content $f -Raw | ConvertFrom-Json; $logsPath = Join-Path '[EFT_INSTALL_PATH]' 'Logs'; if (-not (Test-Path $logsPath)) { $logsPath = Join-Path '[EFT_INSTALL_PATH]' 'build\Logs' }; if (Test-Path $logsPath) { $j.TarkovMonitor.CustomLogsPath = $logsPath; $j | ConvertTo-Json -Depth 10 | Set-Content $f -Encoding UTF8 }&quot;"
+                 Sequence="execute" Before="PatchAppSettings"
+                 Condition="EFT_INSTALL_PATH" />
+
+    <CustomAction Id="PatchAppSettings"
+                  DllEntry="WixQuietExec"
+                  BinaryRef="Wix4UtilCA_X86"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <InstallExecuteSequence>
+      <Custom Action="PatchAppSettings" After="InstallFiles"
+              Condition="EFT_INSTALL_PATH AND NOT REMOVE" />
+    </InstallExecuteSequence>
+
+  </Fragment>
+
+</Wix>

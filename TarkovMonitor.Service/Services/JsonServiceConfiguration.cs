@@ -31,6 +31,9 @@ public class JsonServiceConfiguration : IServiceConfiguration
     public string? CustomMap { get; set; }
 
     /// <inheritdoc />
+    public string? ScreenshotsPath { get; set; }
+
+    /// <inheritdoc />
     public Dictionary<string, string> TarkovTrackerDomains { get; set; } = new();
 
     /// <inheritdoc />
@@ -70,8 +73,9 @@ public class JsonServiceConfiguration : IServiceConfiguration
         try
         {
             var section = _config.GetSection("TarkovMonitor");
-            CustomLogsPath = section["CustomLogsPath"];
-            CustomMap      = section["CustomMap"];
+            CustomLogsPath  = section["CustomLogsPath"];
+            CustomMap       = section["CustomMap"];
+            ScreenshotsPath = section["ScreenshotsPath"];
 
             // IConfiguration natively enumerates child keys of a section, which is AOT-safe.
             TarkovTrackerDomains = new();
@@ -112,6 +116,7 @@ public class JsonServiceConfiguration : IServiceConfiguration
                 {
                     ["CustomLogsPath"]        = CustomLogsPath ?? "",
                     ["CustomMap"]             = CustomMap ?? "",
+                    ["ScreenshotsPath"]       = ScreenshotsPath ?? "",
                     ["TarkovTrackerDomains"]  = domainsNode,
                     ["TarkovTrackerTokens"]   = tokensNode
                 }
@@ -121,11 +126,6 @@ public class JsonServiceConfiguration : IServiceConfiguration
             // node tree, so it is safe under Native AOT.
             await File.WriteAllTextAsync(_configPath,
                 root.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
-
-            // Mirror the custom logs path into the Registry so GameWatcher can read it without
-            // a gRPC round-trip.  Writes require LocalSystem/admin; the Service runs with sufficient rights.
-            if (!string.IsNullOrEmpty(CustomLogsPath))
-                RegistrySettings.CustomLogsPath = CustomLogsPath;
         }
         catch (Exception ex)
         {

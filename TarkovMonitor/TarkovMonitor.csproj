@@ -44,7 +44,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TarkovMonitor.Service.Contracts\TarkovMonitor.Service.Contracts.csproj" />
-    <!-- Core contains GameWatcher, LogMonitor, RegistrySettings, TarkovTrackerClient etc.
+    <!-- Core contains GameWatcher, LogMonitor, TarkovTrackerClient etc.
          The five source files previously in this project (GameWatcher.cs, LogMonitor.cs,
          LogLine.cs, LogMessageTypes.cs, GetProcessFilename.cs) have been moved to Core so
          the headless Service can reference them without pulling in WinForms. -->

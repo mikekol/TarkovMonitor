@@ -34,7 +34,6 @@ Q:\repos\TarkovMonitor\
 │   ├── LogLine.cs
 │   ├── LogMessageTypes.cs                  ← All log content POCOs
 │   ├── GetProcessFilename.cs
-│   ├── RegistrySettings.cs                 ← HKLM\SOFTWARE\TarkovMonitor wrapper
 │   ├── CoreJsonContext.cs                  ← Source-gen JSON context (AOT-safe)
 │   └── TarkovTrackerClient.cs              ← Stateless Refit client + TaskStatusBody
 ├── TarkovMonitor.Service\                  ← Service project
@@ -93,27 +92,22 @@ cd TarkovMonitor && dotnet run
 
 ### TarkovMonitor.Core (shared library)
 - Contains: `GameWatcher`, `LogMonitor`, `LogLine`, `LogMessageTypes`, `GetProcessFilename`
-- Also contains: `RegistrySettings`, `CoreJsonContext`, `TarkovTrackerClient`
+- Also contains: `CoreJsonContext`, `TarkovTrackerClient`
 - No `UseWindowsForms` dependency — safe for both the Service (headless) and UI to reference
 - Previously these files lived in `TarkovMonitor/`; moved to Core so the Service doesn't need to pull in WinForms
 
 ### gRPC Service (TarkovMonitor.Service)
 - **Entry point:** `Program.cs` — Host, DI, Kestrel on port 50051
-- **Startup:** `GameWatcherHostedService` — starts GameWatcher; logs path auto-detected from EFT registry key, overridden only if `customLogsPath` set in appsettings.json
+- **Startup:** `GameWatcherHostedService` — starts GameWatcher; logs path read from `appsettings.json` (pre-populated by the MSI installer's PowerShell custom action at install time, or pushed by the UI via `UpdateConfig`)
 - **Service impl:** `GameEventBroadcasterService.cs` — broadcasts 18+ game events via gRPC streaming
   - All `GameWatcher` events serialized into proto `GameEvent.Data` (map<string, string>)
   - Stream list managed with lock for correct cleanup
   - `GetConfig()`, `UpdateConfig()`, `GetStatus()` RPC methods
-- **Config:** `IServiceConfiguration` + `JsonServiceConfiguration` handles token/logs path/domain persistence
+- **Config:** `IServiceConfiguration` + `JsonServiceConfiguration` handles token/logs path/domain/screenshots path persistence
   - Tokens and domains are `Dictionary<string, string>` keyed by EFT profile ID
-  - Syncs `CustomLogsPath` to `HKLM\SOFTWARE\TarkovMonitor` on save (domain is no longer in registry — it's per-profile in appsettings.json)
+  - `ScreenshotsPath` is pushed by the UI at connect time (service can't resolve user's Documents folder)
+  - No registry writes — all config persisted to `appsettings.json`
 - **TarkovTracker updater:** `TarkovTrackerUpdaterService` subscribes to GameWatcher task events and calls the TarkovTracker API even when the UI is closed. Instantiates a fresh `TarkovTrackerClient` per event to avoid stale tokens.
-
-### RegistrySettings (TarkovMonitor.Core/RegistrySettings.cs)
-- Wraps `HKLM\SOFTWARE\TarkovMonitor` — reads don't require elevation; writes require LocalSystem/admin
-- The Service (LocalSystem) writes. The UI only reads.
-- Values: `CustomLogsPath` only (domain is now per-profile in appsettings.json, not in registry)
-- Purpose: lets the GameWatcher read the custom logs path on service startup without a gRPC round-trip
 
 ### CoreJsonContext (TarkovMonitor.Core/CoreJsonContext.cs)
 - Source-generated `JsonSerializerContext` covering all types that cross the gRPC boundary
@@ -130,7 +124,7 @@ cd TarkovMonitor && dotnet run
 - **Dispatch:** `DispatchGameEvent()` reads proto data map and fires typed events with reconstructed event args
 - **Reconnection:** `ConnectionStateChanged` with `IsConnected = false` triggers retry in UI
 - **RPC passthrough:** `GetConfigAsync()`, `UpdateConfigAsync()` for config management
-  - `UpdateConfigAsync(customLogsPath, customMap, tarkovTrackerTokens, tarkovTrackerDomains)` — tokens and domains are both `Dictionary<string,string>?` keyed by EFT profile ID; partial-update semantics (only keys present are changed)
+  - `UpdateConfigAsync(customLogsPath, customMap, tarkovTrackerTokens, tarkovTrackerDomains, screenshotsPath)` — tokens and domains are both `Dictionary<string,string>?` keyed by EFT profile ID; partial-update semantics (only keys present are changed); `screenshotsPath` pushed at connect time so the service watches the correct user-session folder
 - **Event args types defined in file:** `TaskEventArgs`, `FleaSaleEventArgs`, `FleaExpiredEventArgs`, `GroupInviteAcceptedEventArgs`, `GroupUserLeaveEventArgs`
 
 ### UI (TarkovMonitor/MainBlazorUI.cs)
@@ -230,6 +224,8 @@ Key facts:
 - `HarvestDirectory` in wixproj is silently broken in WiX 4.0.6; harvesting is done by the script instead.
 - The WiX linker dead-code-eliminates `<Fragment>` elements unless referenced from `<Package>` — `<FeatureRef Id="FeatureAll" />` in Package.wxs is what pulls the feature tree in.
 - `obj/` is deleted before each build to prevent WiX incremental caching issues.
+- `ServiceAccount.wxs` — dialog letting the user choose LocalService (default) or NetworkService.
+- `ConfigureService.wxs` — PowerShell custom action that reads the EFT install path from the registry at install time and writes it to the service's `appsettings.json`. Runs via `WixQuietExec` (deferred, elevated). ExecutionPolicy does not apply because the code is passed inline via `-Command`.
 
 ## Next Steps (Phase 4 — Testing)
 
@@ -245,4 +241,7 @@ Key facts:
 - Service listens on HTTP/2 (gRPC requirement). Use `http://localhost:50051` (not https).
 - `RaidInfo.RaidType` is a computed property — can't be set directly. Client reconstructs timing values to make it compute to the right enum value (PMC: StartingTime = StartedTime - 10s; Scav: StartingTime = null; PVE: Profile.Type = PVE).
 - `WFO1000` warning suppressed in TarkovMonitor.csproj — pre-existing `Splash.cs` issue with .NET 10 WinForms analyzer.
-- `TarkovTracker.cs` in UI uses per-profile domains keyed by EFT profile ID — `RegistrySettings.TarkovTrackerDomain` no longer exists (removed).
+- `TarkovTracker.cs` in UI uses per-profile domains keyed by EFT profile ID.
+- `RegistrySettings.cs` has been deleted — the service no longer reads or writes the registry. `GameWatcher.GetDefaultLogsFolder()` still reads the EFT Uninstall key directly but this is only called by UI code (Settings.razor, RawLogs.razor), not the service.
+- The service runs as LocalService (default) or NetworkService (user-selectable at install time). It does not require LocalSystem.
+- `GameWatcher.ScreenshotsPath` is settable — the UI pushes the correct user-session path at connect time via `UpdateConfigAsync`. Without this, the service's `FileSystemWatcher` would watch the service account's Documents folder instead of the interactive user's.

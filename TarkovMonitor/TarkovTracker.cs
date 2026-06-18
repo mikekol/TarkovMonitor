@@ -30,7 +30,7 @@ namespace TarkovMonitor
             Task<string> SetTaskStatuses([Body] List<TaskStatusBody> body);
         }
 
-        private static ITarkovTrackerAPI api = InitAPI();
+        private static ITarkovTrackerAPI api;
 
         public static ProgressResponse Progress { get; private set; } = new();
         public static bool ValidToken { get; private set; } = false;
@@ -54,6 +54,7 @@ namespace TarkovMonitor
         static TarkovTracker() {
             tokens = JsonSerializer.Deserialize<Dictionary<string, string>>(Properties.Settings.Default.tarkovTrackerTokens) ?? tokens;
             _profileDomains = JsonSerializer.Deserialize<Dictionary<string, string>>(Properties.Settings.Default.tarkovTrackerDomains) ?? _profileDomains;
+            api = InitAPI();
         }
 
         /// <summary>

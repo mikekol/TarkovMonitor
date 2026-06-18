@@ -10,8 +10,6 @@ namespace TarkovMonitor
 {
     public class GameWatcher
     {
-        private Process? process;
-        private readonly System.Timers.Timer processTimer;
         private readonly FileSystemWatcher logFileCreateWatcher;
         private readonly FileSystemWatcher screenshotWatcher;
         private string _logsPath = "";
@@ -20,9 +18,16 @@ namespace TarkovMonitor
         public bool InitialLogsRead { get; private set; } = false;
 
         /// <summary>
+        /// When <see langword="false"/>, the screenshot <see cref="FileSystemWatcher"/> is not
+        /// started.  The service sets this to <see langword="false"/> because LocalService cannot
+        /// access the interactive user's Documents folder; the UI watches screenshots directly.
+        /// </summary>
+        public bool EnableScreenshotWatching { get; set; } = true;
+
+        /// <summary>
         /// Gets or sets an optional override for the EFT Logs folder path.
-        /// When set, the value is used immediately and persisted by the caller (Service writes to
-        /// <see cref="RegistrySettings.CustomLogsPath"/>; the UI calls <c>UpdateConfigAsync</c>).
+        /// When set, the value is used immediately and persisted by the caller (the UI calls
+        /// <c>UpdateConfigAsync</c>; the service persists to <c>appsettings.json</c>).
         /// When <see langword="null"/> or empty, <see cref="GetDefaultLogsFolder"/> is used on first access.
         /// </summary>
         public string LogsPath {
@@ -72,11 +77,27 @@ namespace TarkovMonitor
             }
         }
         private readonly Dictionary<string, RaidInfo> Raids = new();
+        private string? _screenshotsPath;
+
+        /// <summary>
+        /// Gets or sets the path to the EFT Screenshots folder.  When running in the user's
+        /// session the default (My Documents\Escape From Tarkov\Screenshots) is correct.  When
+        /// running under a service account the caller must set this explicitly because
+        /// <see cref="Environment.SpecialFolder.MyDocuments"/> resolves to the service account's
+        /// profile directory, not the interactive user's.
+        /// Setting this property re-initialises the screenshot <see cref="FileSystemWatcher"/>.
+        /// </summary>
         public string ScreenshotsPath
         {
-            get
+            get => !string.IsNullOrEmpty(_screenshotsPath)
+                ? _screenshotsPath
+                : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Escape From Tarkov", "Screenshots");
+            set
             {
-                return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Escape From Tarkov", "Screenshots");
+                if (_screenshotsPath == value) return;
+                _screenshotsPath = value;
+                if (EnableScreenshotWatching && screenshotWatcher.EnableRaisingEvents)
+                    SetupScreenshotWatcher();
             }
         }
 
@@ -94,7 +115,7 @@ namespace TarkovMonitor
         public event EventHandler<NewLogDataEventArgs>? NewLogData;
         public event EventHandler<ExceptionEventArgs>? ExceptionThrown;
         public event EventHandler<DebugEventArgs>? DebugMessage;
-        public event EventHandler? GameStarted;
+
         public event EventHandler<LogContentEventArgs<GroupLogContent>>? GroupInviteAccept;
         public event EventHandler<LogContentEventArgs<GroupRaidSettingsLogContent>>? GroupRaidSettings;
         public event EventHandler<LogContentEventArgs<GroupMatchRaidReadyLogContent>>? GroupMemberReady;
@@ -179,11 +200,6 @@ namespace TarkovMonitor
 			{
 				Filter = "*.log",
 				IncludeSubdirectories = true,
-			};
-			processTimer = new System.Timers.Timer(TimeSpan.FromSeconds(30).TotalMilliseconds)
-			{
-				AutoReset = true,
-				Enabled = false
 			};
 			screenshotWatcher = new FileSystemWatcher();
         }
@@ -273,7 +289,7 @@ namespace TarkovMonitor
             }
         }
 
-        private float QuarternionsToYaw(float x, float z, float y, float w)
+        public static float QuarternionsToYaw(float x, float z, float y, float w)
         {
             // Calculate singularity test
             // Roll (x-axis rotation)
@@ -311,10 +327,8 @@ namespace TarkovMonitor
                 logFileCreateWatcher.Path = LogsPath;
                 logFileCreateWatcher.Created += LogFileCreateWatcher_Created;
 				logFileCreateWatcher.EnableRaisingEvents = true;
-				processTimer.Elapsed += ProcessTimer_Elapsed;
-				UpdateProcess();
-				SetupScreenshotWatcher();
-				processTimer.Enabled = true;
+				if (EnableScreenshotWatching)
+					SetupScreenshotWatcher();
 				if (Monitors.Count == 0)
 				{
 					WatchLogsFolder(GetLatestLogFolder());
@@ -613,10 +627,6 @@ namespace TarkovMonitor
             }
         }
 
-        private void ProcessTimer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
-        {
-            UpdateProcess();
-        }
 
         public Dictionary<DateTime, string> GetLogFolders()
         {
@@ -810,35 +820,6 @@ namespace TarkovMonitor
             }
         }
 
-        private void UpdateProcess()
-        {
-            try
-            {
-                if (process != null)
-                {
-                    if (!process.HasExited)
-                    {
-                        return;
-                    }
-                    //DebugMessage?.Invoke(this, new DebugEventArgs("EFT exited."));
-                    process = null;
-                }
-                raidInfo = new();
-                var processes = Process.GetProcessesByName("EscapeFromTarkov");
-                if (processes.Length == 0)
-                {
-                    //DebugMessage?.Invoke(this, new DebugEventArgs("EFT not running."));
-                    process = null;
-                    return;
-                }
-                GameStarted?.Invoke(this, new EventArgs());
-                process = processes.First();
-
-            } catch (Exception ex)
-            {
-                ExceptionThrown?.Invoke(this, new(ex, "watching for EFT process"));
-            }
-        }
 
         private string GetLatestLogFolder()
         {

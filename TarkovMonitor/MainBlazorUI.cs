@@ -24,6 +24,8 @@ namespace TarkovMonitor
         private readonly System.Timers.Timer scavCooldownTimer;
         private LocalizationService localizationService;
         private bool inRaid;
+        private RaidInfo _currentRaidInfo = new();
+        private FileSystemWatcher? _screenshotWatcher;
 
         private static string ScreenshotsPath => Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
@@ -88,6 +90,8 @@ namespace TarkovMonitor
             _gameClient.PlayerPosition += Eft_PlayerPosition;
             _gameClient.ProfileChanged += Eft_ProfileChanged;
             _gameClient.ControlSettings += Eft_ControlSettings;
+
+            SetupScreenshotWatcher();
 
             _gameClient.InitialReadComplete += (object? sender, ProfileEventArgs e) =>
             {
@@ -216,6 +220,12 @@ namespace TarkovMonitor
                 {
                     messageLog.AddMessage("Connecting to TarkovMonitor service...", "info");
                     await _gameClient.ConnectAsync();
+
+                    // Push user-session config that the service can't resolve on its own.
+                    await _gameClient.UpdateConfigAsync(
+                        Properties.Settings.Default.customLogsPath,
+                        Properties.Settings.Default.customMap);
+
                     return;
                 }
                 catch (Exception ex)
@@ -313,6 +323,7 @@ namespace TarkovMonitor
         private void Eft_RaidEnded(object? sender, RaidInfoEventArgs e)
         {
             inRaid = false;
+            _currentRaidInfo = e.RaidInfo;
             var mapName = e.RaidInfo.Map;
             var map = TarkovDev.Maps.Find(m => m.nameId == mapName);
             if (map != null) mapName = map.name;
@@ -352,6 +363,82 @@ namespace TarkovMonitor
             catch (Exception ex)
             {
                 messageLog.AddMessage($"Error minimizing at startup: {ex.Message} {ex.StackTrace}", "exception");
+            }
+        }
+
+        private void SetupScreenshotWatcher()
+        {
+            try
+            {
+                bool pathExists = Directory.Exists(ScreenshotsPath);
+                if (pathExists)
+                {
+                    _screenshotWatcher = new FileSystemWatcher(ScreenshotsPath, "*.png");
+                    _screenshotWatcher.Created += ScreenshotWatcher_Created;
+                    _screenshotWatcher.EnableRaisingEvents = true;
+                }
+                else
+                {
+                    var docsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                    _screenshotWatcher = new FileSystemWatcher(docsPath)
+                    {
+                        IncludeSubdirectories = true
+                    };
+                    _screenshotWatcher.Created += ScreenshotWatcher_FolderCreated;
+                    _screenshotWatcher.Renamed += ScreenshotWatcher_FolderCreated;
+                    _screenshotWatcher.EnableRaisingEvents = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                messageLog.AddMessage($"Error initializing screenshot watcher: {ex.Message}", "exception");
+            }
+        }
+
+        private void ScreenshotWatcher_FolderCreated(object sender, FileSystemEventArgs e)
+        {
+            if (string.Equals(e.FullPath, ScreenshotsPath, StringComparison.OrdinalIgnoreCase))
+            {
+                _screenshotWatcher?.Dispose();
+                SetupScreenshotWatcher();
+            }
+        }
+
+        private void ScreenshotWatcher_Created(object sender, FileSystemEventArgs e)
+        {
+            try
+            {
+                string filename = e.Name ?? "";
+                var match = System.Text.RegularExpressions.Regex.Match(filename,
+                    @"\d{4}-\d{2}-\d{2}\[\d{2}-\d{2}\]_?(?<position>.+) \(\d\)\.png");
+                if (!match.Success) return;
+
+                var position = System.Text.RegularExpressions.Regex.Match(match.Groups["position"].Value,
+                    @"(?<x>-?[\d]+\.[\d]{2}), (?<y>-?[\d]+\.[\d]{2}), (?<z>-?[\d]+\.[\d]{2})_?(?<rx>-?[\d.]{1}\.[\d]{1,5}), (?<ry>-?[\d.]{1}\.[\d]{1,5}), (?<rz>-?[\d.]{1}\.[\d]{1,5}), (?<rw>-?[\d.]{1}\.[\d]{1,5})");
+                if (!position.Success) return;
+
+                var raid = _currentRaidInfo;
+                if (string.IsNullOrEmpty(raid.Map) && !string.IsNullOrEmpty(Properties.Settings.Default.customMap))
+                    raid = new RaidInfo { Map = Properties.Settings.Default.customMap };
+                if (string.IsNullOrEmpty(raid.Map)) return;
+
+                var rotation = GameWatcher.QuarternionsToYaw(
+                    float.Parse(position.Groups["rx"].Value, CultureInfo.InvariantCulture),
+                    float.Parse(position.Groups["ry"].Value, CultureInfo.InvariantCulture),
+                    float.Parse(position.Groups["rz"].Value, CultureInfo.InvariantCulture),
+                    float.Parse(position.Groups["rw"].Value, CultureInfo.InvariantCulture));
+
+                var args = new PlayerPositionEventArgs(
+                    raid, GameWatcher.CurrentProfile,
+                    new Position(position.Groups["x"].Value, position.Groups["y"].Value, position.Groups["z"].Value),
+                    rotation, filename);
+
+                raid.Screenshots.Add(filename);
+                Eft_PlayerPosition(this, args);
+            }
+            catch (Exception ex)
+            {
+                messageLog.AddMessage($"Error parsing screenshot {e.Name}: {ex.Message}", "exception");
             }
         }
 
@@ -570,6 +657,7 @@ namespace TarkovMonitor
         private async void Eft_RaidStart(object? sender, RaidInfoEventArgs e)
         {
             inRaid = true;
+            _currentRaidInfo = e.RaidInfo;
             Stats.AddRaid(e);
             var mapName = e.RaidInfo.Map;
             var map = TarkovDev.Maps.Find(m => m.nameId == mapName);

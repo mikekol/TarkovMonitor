@@ -11,11 +11,12 @@
     (see Build-Installer.ps1 -ExcludeFiles). All other service files are
     harvested normally into ServiceFileComponents.
 
-    Service account: LocalSystem
-      LocalSystem can read EFT log files (game install dir, world-readable)
-      and read/write the service install dir. Users requiring a least-privilege
-      account can re-configure post-install using the management scripts in the
-      Tools feature (see FeatureTools).
+    Service account: user-selectable (LocalService or NetworkService)
+      Default is LocalService (minimal privileges, localhost only).
+      NetworkService is offered for multi-machine setups where the UI or
+      Streamer Dashboard runs on a different computer.
+      The SERVICE_ACCOUNT property is set by the ServiceAccountDlg dialog
+      (see ServiceAccount.wxs).
 
     Firewall rule: Private profile, local subnet scope.
       This allows LAN clients to connect. Users who want localhost-only can
@@ -44,7 +45,7 @@
           Description="Monitors Escape from Tarkov log files and broadcasts game events over gRPC."
           Type="ownProcess"
           Start="auto"
-          Account="LocalSystem"
+          Account="[SERVICE_ACCOUNT]"
           ErrorControl="normal" />
 
         <ServiceControl
@@ -52,7 +53,7 @@
           Name="TarkovMonitorService"
           Start="install"
           Stop="both"
-          Remove="uninstall"
+          Remove="both"
           Wait="yes" />
 
         <!--

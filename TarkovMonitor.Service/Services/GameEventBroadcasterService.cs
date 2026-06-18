@@ -74,6 +74,7 @@ public class GameEventBroadcasterService : TarkovMonitorService.TarkovMonitorSer
         {
             CustomLogsPath       = _config.CustomLogsPath ?? "",
             CustomMap            = _config.CustomMap ?? "",
+            ScreenshotsPath      = _config.ScreenshotsPath ?? "",
             TarkovTrackerEnabled = _config.TarkovTrackerEnabled,
         };
         foreach (var kvp in _config.TarkovTrackerTokens)
@@ -97,6 +98,14 @@ public class GameEventBroadcasterService : TarkovMonitorService.TarkovMonitorSer
             // CustomMap is always written (empty string = clear the fallback).
             _config.CustomMap      = request.CustomMap;
             _gameWatcher.CustomMap = string.IsNullOrEmpty(request.CustomMap) ? null : request.CustomMap;
+
+            // ScreenshotsPath: the service can't resolve the user's Documents folder, so
+            // the UI pushes the correct path at connect time.
+            if (!string.IsNullOrEmpty(request.ScreenshotsPath))
+            {
+                _config.ScreenshotsPath = request.ScreenshotsPath;
+                _gameWatcher.ScreenshotsPath = request.ScreenshotsPath;
+            }
 
             // Merge token map: the client sends only the keys it wants to change
             foreach (var kvp in request.TarkovTrackerTokens)

@@ -45,9 +45,7 @@ $Root = Split-Path $PSScriptRoot -Parent
 # Auto-detect version from Directory.Build.props when not explicitly provided
 if (-not $Version) {
     [xml]$props = Get-Content (Join-Path $Root "Directory.Build.props")
-    $raw     = $props.Project.PropertyGroup.ProjectVersion
-    $parts   = $raw -split '\.'
-    $Version = ($parts[0..[Math]::Min(2, $parts.Count - 1)] -join '.')
+    $Version = $props.Project.PropertyGroup.ProjectBaseVersion
 }
 $PublishRoot      = Join-Path $Root "publish"
 $InstallerDir     = Join-Path $Root "TarkovMonitor.Installer"
@@ -184,19 +182,6 @@ if (-not $SkipPublish) {
     if ($LASTEXITCODE -ne 0) { throw "Publish TarkovMonitor failed." }
 
     # ---------------------------------------------------------------------------
-    Step "Publish TarkovMonitor.StreamerDashboard"
-    # ---------------------------------------------------------------------------
-    # WinUI3 (Windows App SDK) does not support PublishSingleFile without
-    # EnableMsixTooling. Publish as a standard self-contained folder instead.
-    $dashOut = Join-Path $PublishRoot "Dashboard"
-    dotnet publish "$Root\TarkovMonitor.StreamerDashboard" `
-        --configuration Release `
-        --runtime win-x64 `
-        --self-contained true `
-        --output $dashOut
-    if ($LASTEXITCODE -ne 0) { throw "Publish TarkovMonitor.StreamerDashboard failed." }
-
-    # ---------------------------------------------------------------------------
     Step "Stage management tools"
     # ---------------------------------------------------------------------------
     $toolsOut = Join-Path $PublishRoot "Tools"
@@ -218,7 +203,6 @@ $harvests = @(
     # in Service.wxs (required so InstallServices can derive the correct binary path).
     @{ Dir = 'Service';   RefId = 'ServiceDir';   GroupId = 'ServiceFileComponents';   Prefix = 'svc';   Exclude = @('TarkovMonitor.Service.exe') }
     @{ Dir = 'UI';        RefId = 'UIDir';         GroupId = 'UIFileComponents';         Prefix = 'ui';    Exclude = @() }
-    @{ Dir = 'Dashboard'; RefId = 'DashboardDir';  GroupId = 'DashboardFileComponents';  Prefix = 'dash';  Exclude = @() }
     @{ Dir = 'Tools';     RefId = 'ToolsDir';      GroupId = 'ToolsFileComponents';      Prefix = 'tools'; Exclude = @() }
 )
 

@@ -21,6 +21,14 @@ public interface IServiceConfiguration
     string? CustomMap { get; set; }
 
     /// <summary>
+    /// Gets or sets the path to the user's EFT Screenshots folder.  The service process cannot
+    /// resolve this from <c>Environment.SpecialFolder.MyDocuments</c> because it runs under a
+    /// service account (LocalService/NetworkService), not the interactive user session.  The UI
+    /// pushes the correct path at connect time via <c>UpdateConfig</c>.
+    /// </summary>
+    string? ScreenshotsPath { get; set; }
+
+    /// <summary>
     /// Gets or sets the per-profile TarkovTracker API domains keyed by EFT profile ID.
     /// Defaults to <c>tarkovtracker.io</c> for any profile not explicitly configured, so that
     /// profiles belonging to different Windows users can target different TarkovTracker instances.

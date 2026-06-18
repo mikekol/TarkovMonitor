@@ -13,7 +13,8 @@
       It identifies this product family to Windows Installer for upgrade detection.
     -->
 
-    <MajorUpgrade DowngradeErrorMessage="A newer version of TarkovMonitor is already installed." />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of TarkovMonitor is already installed."
+                  Schedule="afterInstallInitialize" />
     <MediaTemplate EmbedCab="yes" />
 
     <!-- Add/Remove Programs metadata -->
@@ -31,12 +32,69 @@
     <!-- License text shown in the UI (plain text or RTF) -->
     <WixVariable Id="WixUILicenseRtf" Value="..\LICENSE.rtf" />
 
+    <!-- Service account selection — consumed by Service.wxs [SERVICE_ACCOUNT] -->
+    <Property Id="SERVICE_ACCOUNT" Value="NT AUTHORITY\LocalService" />
+
+    <UI>
+      <RadioButtonGroup Property="SERVICE_ACCOUNT">
+        <RadioButton Value="NT AUTHORITY\LocalService"
+                     Text="Single computer (recommended)"
+                     X="0" Y="0" Width="300" Height="17" />
+        <RadioButton Value="NT AUTHORITY\NetworkService"
+                     Text="Multiple computers on a local network"
+                     X="0" Y="20" Width="300" Height="17" />
+      </RadioButtonGroup>
+
+      <Dialog Id="ServiceAccountDlg" Width="370" Height="270" Title="!(loc.InstallDirDlg_Title)">
+
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44"
+                 TabSkip="no" Text="!(loc.InstallDirDlgBannerBitmap)" />
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes"
+                 NoPrefix="yes" Text="{\WixUI_Font_Title}Service Account" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15"
+                 Transparent="yes" NoPrefix="yes"
+                 Text="Choose how the TarkovMonitor service should run." />
+
+        <Control Id="Explanation" Type="Text" X="20" Y="55" Width="330" Height="36" NoPrefix="yes"
+                 Text="If you only play Escape from Tarkov and use TarkovMonitor on this computer, choose 'Single computer'. If you run the TarkovMonitor UI or Streamer Dashboard on a separate machine, choose 'Multiple computers'." />
+
+        <Control Id="ServiceAccountGroup" Type="RadioButtonGroup"
+                 X="20" Y="100" Width="330" Height="50"
+                 Property="SERVICE_ACCOUNT" />
+
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17"
+                 Text="!(loc.WixUIBack)" />
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17"
+                 Default="yes" Text="!(loc.WixUINext)" />
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17"
+                 Cancel="yes" Text="!(loc.WixUICancel)">
+          <Publish Event="SpawnDialog" Value="CancelDlg" />
+        </Control>
+
+      </Dialog>
+
+      <!-- Insert between CustomizeDlg and VerifyReadyDlg.
+           Order="2" fires after WixUI's built-in Order 1 transition. -->
+      <Publish Dialog="CustomizeDlg" Control="Next" Event="NewDialog"
+               Value="ServiceAccountDlg" Order="2" />
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog"
+               Value="ServiceAccountDlg" Order="2" Condition="NOT Installed" />
+
+      <!-- ServiceAccountDlg navigation -->
+      <Publish Dialog="ServiceAccountDlg" Control="Back" Event="NewDialog"
+               Value="CustomizeDlg" />
+      <Publish Dialog="ServiceAccountDlg" Control="Next" Event="NewDialog"
+               Value="VerifyReadyDlg" />
+    </UI>
+
     <!-- Directory structure -->
     <StandardDirectory Id="ProgramFiles6432Folder">
       <Directory Id="TarkovMonitorDir" Name="TarkovMonitor">
         <Directory Id="ServiceDir"   Name="Service" />
         <Directory Id="UIDir"        Name="UI" />
-        <Directory Id="DashboardDir" Name="Dashboard" />
         <Directory Id="ToolsDir"     Name="Tools" />
       </Directory>
     </StandardDirectory>

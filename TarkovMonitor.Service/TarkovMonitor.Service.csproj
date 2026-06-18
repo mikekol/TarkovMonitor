@@ -26,8 +26,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TarkovMonitor.Service.Contracts\TarkovMonitor.Service.Contracts.csproj" />
-    <!-- Reference Core (GameWatcher, LogMonitor, TarkovTrackerClient, RegistrySettings) rather than
-         the UI project.  The UI project pulls in UseWindowsForms which blocks Native AOT; Core does not. -->
+    <!-- Reference Core (GameWatcher, LogMonitor, TarkovTrackerClient) rather than the UI project.
+         The UI project pulls in UseWindowsForms which blocks Native AOT; Core does not. -->
     <ProjectReference Include="..\TarkovMonitor.Core\TarkovMonitor.Core.csproj" />
   </ItemGroup>
 

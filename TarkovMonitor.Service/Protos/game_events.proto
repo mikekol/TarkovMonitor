@@ -23,6 +23,7 @@ message UpdateConfigRequest {
  map<string, string> tarkov_tracker_tokens  = 4;
  string custom_map                          = 5;  // fallback map name for screenshot detection when no active raid
  map<string, string> tarkov_tracker_domains = 6;  // per-profile domain (profileId → domain)
+ string screenshots_path                    = 7;  // user's EFT Screenshots folder (service can't resolve it)
 }
 
 message UpdateConfigResponse {
@@ -52,4 +53,5 @@ message ServiceConfig {
  map<string, string> tarkov_tracker_tokens  = 5;
  string custom_map                          = 6;  // fallback map name for screenshot detection when no active raid
  map<string, string> tarkov_tracker_domains = 7;  // per-profile domain (profileId → domain)
+ string screenshots_path                    = 8;  // user's EFT Screenshots folder
 }

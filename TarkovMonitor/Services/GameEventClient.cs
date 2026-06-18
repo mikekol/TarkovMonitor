@@ -317,17 +317,24 @@ public class GameEventClient : IAsyncDisposable
     /// Per-profile domain overrides to merge into the service config, keyed by EFT profile ID.
     /// Pass <see langword="null"/> or an empty dictionary to leave domains unchanged.
     /// </param>
+    /// <param name="screenshotsPath">
+    /// Path to the user's EFT Screenshots folder.  The service runs under a service account and
+    /// cannot resolve this from <c>Environment.SpecialFolder.MyDocuments</c>.  Pass empty string
+    /// to leave unchanged.
+    /// </param>
     public async Task UpdateConfigAsync(
         string customLogsPath,
         string customMap = "",
         Dictionary<string, string>? tarkovTrackerTokens = null,
-        Dictionary<string, string>? tarkovTrackerDomains = null)
+        Dictionary<string, string>? tarkovTrackerDomains = null,
+        string screenshotsPath = "")
     {
         if (_grpcClient == null) throw new InvalidOperationException("Not connected");
         var request = new UpdateConfigRequest
         {
-            CustomLogsPath = customLogsPath,
-            CustomMap      = customMap,
+            CustomLogsPath  = customLogsPath,
+            CustomMap       = customMap,
+            ScreenshotsPath = screenshotsPath,
         };
         if (tarkovTrackerTokens != null)
             foreach (var kvp in tarkovTrackerTokens)

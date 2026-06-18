@@ -50,6 +50,9 @@
         <ComponentRef Id="UIDesktopShortcut" />
       </Feature>
 
+      <!--
+        Dashboard disabled while service+UI are being stabilised.
+        Uncomment when ready to include in the installer.
       <Feature Id="FeatureDashboard"
         Title="Streamer Dashboard"
         Description="WinUI streaming overlay dashboard. Requires the TarkovMonitor Service."
@@ -58,6 +61,7 @@
         <ComponentGroupRef Id="DashboardFileComponents" />
         <ComponentRef Id="DashboardStartMenuShortcut" />
       </Feature>
+      -->
 
     </Feature>
   </Fragment>

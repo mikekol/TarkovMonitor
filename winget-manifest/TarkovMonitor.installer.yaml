@@ -1,0 +1,41 @@
+# TarkovMonitor winget manifest — singleton format
+#
+# This file is a template. Before publishing to winget-pkgs:
+#   1. Update PackageVersion
+#   2. Update InstallerUrl to the GitHub release download URL
+#   3. Update InstallerSha256 (computed by Build-Installer.ps1)
+#   4. Split into versioned manifest files per winget-pkgs schema requirements
+#      (see https://github.com/microsoft/winget-pkgs/blob/master/doc/manifest)
+#
+# To validate locally:
+#   winget validate winget-manifest\TarkovMonitor.installer.yaml
+
+PackageIdentifier: the-hideout.TarkovMonitor
+PackageVersion: 1.0.0
+PackageName: TarkovMonitor
+PackageUrl: https://github.com/the-hideout/TarkovMonitor
+Publisher: the-hideout
+PublisherUrl: https://github.com/the-hideout
+License: MIT
+LicenseUrl: https://github.com/the-hideout/TarkovMonitor/blob/master/LICENSE
+ShortDescription: Escape from Tarkov monitoring and overlay tool
+Description: >
+  TarkovMonitor monitors Escape from Tarkov log files and provides a
+  real-time overlay and event broadcast service over gRPC. Supports
+  task tracking, flea market notifications, raid statistics, and more.
+Tags:
+  - gaming
+  - escape-from-tarkov
+  - tarkov
+  - overlay
+InstallerType: msi
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/the-hideout/TarkovMonitor/releases/download/v1.0.0/TarkovMonitor-1.0.0.msi
+    InstallerSha256: 0000000000000000000000000000000000000000000000000000000000000000
+    InstallerSwitches:
+      Silent: /quiet /norestart
+      SilentWithProgress: /passive /norestart
+      Log: /log "[TEMP]\\TarkovMonitor-install.log"
+ManifestType: singleton
+ManifestVersion: 1.6.0

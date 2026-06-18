@@ -30,6 +30,10 @@ public class GameWatcherHostedService : BackgroundService
             // Apply the custom map fallback — used when a screenshot is taken outside an active raid.
             _gameWatcher.CustomMap = _config.CustomMap;
 
+            // Screenshot watching runs in the UI process (interactive user session) because
+            // LocalService cannot access the user's Documents folder.
+            _gameWatcher.EnableScreenshotWatching = false;
+
             _gameWatcher.Start();
             _logger.LogInformation("GameWatcher started, logs path: {LogsPath}", _gameWatcher.LogsPath);
         }
