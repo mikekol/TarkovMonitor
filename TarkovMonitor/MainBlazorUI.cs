@@ -451,11 +451,15 @@ namespace TarkovMonitor
                 return;
             }
             messageLog.AddMessage($"Player position on {map.name}: x: {e.Position.X}, y: {e.Position.Y}, z: {e.Position.Z}");
-            List<JsonObject> socketMessages = new();
-            socketMessages.Add(SocketClient.GetPlayerPositionMessage(e));
+
+            // Send position + zoom to all configured remotes
+            await SocketClient.SendPlayerPositionAndZoom(e);
+
+            // Optionally navigate to map on all remotes
             if (Properties.Settings.Default.navigateMapOnPositionUpdate)
-                socketMessages.Add(SocketClient.GetNavigateToMapMessage(map));
-            SocketClient.Send(socketMessages);
+            {
+                await SocketClient.NavigateToMap(map);
+            }
         }
 
         private void UpdateCheck_Error(object? sender, ExceptionEventArgs e)
