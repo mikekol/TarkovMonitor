@@ -8,6 +8,7 @@ namespace TarkovMonitor
         public static event EventHandler<ExceptionEventArgs>? ExceptionThrown;
         private static readonly string wsUrl = "wss://socket.tarkov.dev";
         //private static readonly string wsUrl = "ws://localhost:8080";
+        private static List<BrowserRemote> _remotes = new();
         private static WebsocketClient socket;
         private static System.Timers.Timer idleTimer = new()
         {
@@ -35,6 +36,7 @@ namespace TarkovMonitor
 
         public static async Task StartClient()
         {
+            ParseRemoteIds();
             var remoteid = Properties.Settings.Default.remoteId;
             socket = new(new Uri(wsUrl + $"?sessionid={remoteid}-tm"));
             socket.MessageReceived.Subscribe(msg => {
@@ -73,6 +75,34 @@ namespace TarkovMonitor
             }
             await StartClient();
             return;
+        }
+
+        private static void ParseRemoteIds()
+        {
+            _remotes.Clear();
+            var remoteIdString = Properties.Settings.Default.remoteId ?? "";
+
+            if (string.IsNullOrWhiteSpace(remoteIdString))
+            {
+                return;
+            }
+
+            // Split by comma or semicolon
+            var ids = remoteIdString.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (var id in ids)
+            {
+                var trimmed = id.Trim();
+                if (!string.IsNullOrWhiteSpace(trimmed))
+                {
+                    _remotes.Add(new BrowserRemote { Id = trimmed });
+                }
+            }
+        }
+
+        public static List<BrowserRemote> GetAllRemotes()
+        {
+            return _remotes;
         }
 
         public static async Task Send(List<JsonObject> messages)
