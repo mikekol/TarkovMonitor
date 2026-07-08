@@ -8,6 +8,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationIcon>Resources\TarkovDev.ico</ApplicationIcon>
+    <AssemblyVersion>1.11.1.0</AssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -38,7 +39,6 @@
 
   <ItemGroup>
     <PackageReference Include="System.Data.SQLite" Version="1.0.119" />
-    <PackageReference Include="Websocket.Client" Version="5.5.0" />
     <PackageReference Include="WindowsAPICodePack-Shell" Version="1.1.1" />
   </ItemGroup>
 
