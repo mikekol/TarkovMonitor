@@ -1,0 +1,60 @@
+commit 49fd7cc1a6022f486796f91ce68ab5dfeb31f54d
+Author: Mike Kolitz <mikekol@outlook.com>
+Date:   Wed Jul 8 14:10:25 2026 -0700
+
+    feat: add SendPlayerPositionAndZoom method with configurable zoom level
+    
+    Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>
+
+diff --git a/TarkovMonitor/SocketClient.cs b/TarkovMonitor/SocketClient.cs
+index 293d14c..d4f7884 100644
+--- a/TarkovMonitor/SocketClient.cs
++++ b/TarkovMonitor/SocketClient.cs
+@@ -169,6 +169,47 @@ namespace TarkovMonitor
+             }
+         }
+ 
++        public static async Task SendPlayerPositionAndZoom(PlayerPositionEventArgs e)
++        {
++            var map = TarkovDev.Maps.Find(m => m.nameId == e.RaidInfo.Map)?.normalizedName;
++            if (map == null && e.RaidInfo.Map != null)
++            {
++                return;
++            }
++
++            // Get zoom level from settings (default 200)
++            int zoomLevel = Properties.Settings.Default.zoomLevelOnLocationUpdate;
++            if (zoomLevel < 100) zoomLevel = 100;
++            if (zoomLevel > 400) zoomLevel = 400;
++
++            var messages = new List<JsonObject>();
++
++            // Add position message
++            messages.Add(GetPlayerPositionMessage(e));
++
++            // Add zoom message
++            // TODO: Verify zoom command format with tarkov.dev WebSocket API
++            // If "zoom" is not a valid command type, adjust the data.type value
++            messages.Add(new JsonObject
++            {
++                ["type"] = "command",
++                ["data"] = new JsonObject
++                {
++                    ["type"] = "zoom",
++                    ["value"] = zoomLevel
++                }
++            });
++
++            try
++            {
++                await Send(messages);
++            }
++            catch (Exception ex)
++            {
++                ExceptionThrown?.Invoke(messages, new(ex, "sending player position and zoom"));
++            }
++        }
++
+         public static JsonObject GetPlayerPositionMessage(PlayerPositionEventArgs e)
+         {
+             var map = TarkovDev.Maps.Find(m => m.nameId == e.RaidInfo.Map)?.normalizedName;

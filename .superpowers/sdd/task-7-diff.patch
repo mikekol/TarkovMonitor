@@ -1,0 +1,79 @@
+commit 66915008a2872a1bbe5a6a1370b30e88fb542131
+Author: Mike Kolitz <mikekol@outlook.com>
+Date:   Wed Jul 8 14:15:34 2026 -0700
+
+    feat: add zoom level slider and remote ID input to Settings UI
+
+diff --git a/TarkovMonitor/Blazor/Pages/Settings/Settings.razor b/TarkovMonitor/Blazor/Pages/Settings/Settings.razor
+index db1dedf..b52d5bc 100644
+--- a/TarkovMonitor/Blazor/Pages/Settings/Settings.razor
++++ b/TarkovMonitor/Blazor/Pages/Settings/Settings.razor
+@@ -164,6 +164,43 @@
+             </div>
+         </MudPaper>
+     </MudItem>
++
++    <MudItem xs="12">
++        <MudPaper Class="pa-2 ma-2 mx-4" Elevation="3">
++            <MudText Typo="Typo.h6" Class="d-flex align-center"><MudIcon Icon="@Icons.Material.Filled.Gamepad" Class="mr-2" />Browser Remote Control</MudText>
++
++            <div class="setting-item" style="margin-bottom: 16px;">
++                <label for="remoteIds" style="display: block; margin-bottom: 8px; font-weight: 500;">Remote Browser IDs (comma-separated for multiple):</label>
++                <MudTextField @bind-Value="@remoteIdInput"
++                              id="remoteIds"
++                              Placeholder="e.g., abc123,def456"
++                              Variant="Variant.Outlined"
++                              Margin="Margin.Dense" />
++                <small style="display: block; color: #999; margin-top: 4px;">
++                    Enter one or more remote IDs from tarkov.dev, separated by commas.
++                </small>
++            </div>
++
++            <div class="setting-item" style="margin-bottom: 16px;">
++                <label for="zoomLevel" style="display: block; margin-bottom: 8px; font-weight: 500;">Zoom level when location is detected via screenshot (%):</label>
++                <div style="display: flex; align-items: center; gap: 12px;">
++                    <input type="range"
++                           id="zoomLevel"
++                           min="100"
++                           max="400"
++                           step="25"
++                           @bind="@zoomLevelInput"
++                           style="flex: 1;" />
++                    <span style="min-width: 60px; text-align: right;">@zoomLevelInput%</span>
++                </div>
++                <small style="display: block; color: #999; margin-top: 4px;">
++                    Adjust how much the map zooms in when a screenshot reveals your player position.
++                </small>
++            </div>
++
++            <MudButton @onclick="SaveRemoteSettings" Variant="Variant.Filled" Color="Color.Primary">Save Settings</MudButton>
++        </MudPaper>
++    </MudItem>
+ </MudGrid>
+ 
+ @code {
+@@ -187,6 +224,8 @@
+         PlaybackDevices = Sound.GetPlaybackDevices();
+         AvailableLanguages = LocalizationService.GetAvailableLanguages();
+         LocalizationService.LanguageChanged += OnLanguageChanged;
++        remoteIdInput = Properties.Settings.Default.remoteId ?? "";
++        zoomLevelInput = Properties.Settings.Default.zoomLevelOnLocationUpdate;
+     }
+ 
+     protected override void OnParametersSet()
+@@ -698,4 +737,15 @@
+     void SetDefaultLogFolder() {
+         CustomLogsFolder = "";
+     }
++
++    private string remoteIdInput = "";
++    private int zoomLevelInput = 200;
++
++    private void SaveRemoteSettings()
++    {
++        Properties.Settings.Default.remoteId = remoteIdInput;
++        Properties.Settings.Default.zoomLevelOnLocationUpdate = zoomLevelInput;
++        Properties.Settings.Default.Save();
++        messageLog.AddMessage("Remote settings saved successfully.", "success");
++    }
+ }

@@ -1,0 +1,61 @@
+commit 65b6cf80c1317c039077e780d76f207e4d17f5ea
+Author: Mike Kolitz <mikekol@outlook.com>
+Date:   Wed Jul 8 14:07:20 2026 -0700
+
+    feat: parse comma/semicolon-separated remote IDs on startup
+
+diff --git a/TarkovMonitor/SocketClient.cs b/TarkovMonitor/SocketClient.cs
+index b491db7..438a64d 100644
+--- a/TarkovMonitor/SocketClient.cs
++++ b/TarkovMonitor/SocketClient.cs
+@@ -8,6 +8,7 @@ namespace TarkovMonitor
+         public static event EventHandler<ExceptionEventArgs>? ExceptionThrown;
+         private static readonly string wsUrl = "wss://socket.tarkov.dev";
+         //private static readonly string wsUrl = "ws://localhost:8080";
++        private static List<BrowserRemote> _remotes = new();
+         private static WebsocketClient socket;
+         private static System.Timers.Timer idleTimer = new()
+         {
+@@ -35,6 +36,7 @@ namespace TarkovMonitor
+ 
+         public static async Task StartClient()
+         {
++            ParseRemoteIds();
+             var remoteid = Properties.Settings.Default.remoteId;
+             socket = new(new Uri(wsUrl + $"?sessionid={remoteid}-tm"));
+             socket.MessageReceived.Subscribe(msg => {
+@@ -75,6 +77,34 @@ namespace TarkovMonitor
+             return;
+         }
+ 
++        private static void ParseRemoteIds()
++        {
++            _remotes.Clear();
++            var remoteIdString = Properties.Settings.Default.remoteId ?? "";
++
++            if (string.IsNullOrWhiteSpace(remoteIdString))
++            {
++                return;
++            }
++
++            // Split by comma or semicolon
++            var ids = remoteIdString.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
++
++            foreach (var id in ids)
++            {
++                var trimmed = id.Trim();
++                if (!string.IsNullOrWhiteSpace(trimmed))
++                {
++                    _remotes.Add(new BrowserRemote { Id = trimmed });
++                }
++            }
++        }
++
++        public static List<BrowserRemote> GetAllRemotes()
++        {
++            return _remotes;
++        }
++
+         public static async Task Send(List<JsonObject> messages)
+         {
+             var remoteid = Properties.Settings.Default.remoteId;

@@ -1,0 +1,19 @@
+diff --git a/TarkovMonitor/BrowserRemote.cs b/TarkovMonitor/BrowserRemote.cs
+new file mode 100644
+index 0000000..cecce97
+--- /dev/null
++++ b/TarkovMonitor/BrowserRemote.cs
+@@ -0,0 +1,13 @@
++namespace TarkovMonitor
++{
++    /// <summary>
++    /// Represents a single tarkov.dev browser remote instance.
++    /// </summary>
++    public class BrowserRemote
++    {
++        /// <summary>
++        /// The unique session ID for this remote (e.g., "abc123").
++        /// </summary>
++        public string Id { get; set; } = string.Empty;
++    }
++}
