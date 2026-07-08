@@ -169,6 +169,47 @@ namespace TarkovMonitor
             }
         }
 
+        public static async Task SendPlayerPositionAndZoom(PlayerPositionEventArgs e)
+        {
+            var map = TarkovDev.Maps.Find(m => m.nameId == e.RaidInfo.Map)?.normalizedName;
+            if (map == null && e.RaidInfo.Map != null)
+            {
+                return;
+            }
+
+            // Get zoom level from settings (default 200)
+            int zoomLevel = Properties.Settings.Default.zoomLevelOnLocationUpdate;
+            if (zoomLevel < 100) zoomLevel = 100;
+            if (zoomLevel > 400) zoomLevel = 400;
+
+            var messages = new List<JsonObject>();
+
+            // Add position message
+            messages.Add(GetPlayerPositionMessage(e));
+
+            // Add zoom message
+            // TODO: Verify zoom command format with tarkov.dev WebSocket API
+            // If "zoom" is not a valid command type, adjust the data.type value
+            messages.Add(new JsonObject
+            {
+                ["type"] = "command",
+                ["data"] = new JsonObject
+                {
+                    ["type"] = "zoom",
+                    ["value"] = zoomLevel
+                }
+            });
+
+            try
+            {
+                await Send(messages);
+            }
+            catch (Exception ex)
+            {
+                ExceptionThrown?.Invoke(messages, new(ex, "sending player position and zoom"));
+            }
+        }
+
         public static JsonObject GetPlayerPositionMessage(PlayerPositionEventArgs e)
         {
             var map = TarkovDev.Maps.Find(m => m.nameId == e.RaidInfo.Map)?.normalizedName;
