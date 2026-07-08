@@ -130,7 +130,19 @@ namespace TarkovMonitor.Properties {
                 this["remoteId"] = value;
             }
         }
-        
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("200")]
+        public int zoomLevelOnLocationUpdate {
+            get {
+                object val = this["zoomLevelOnLocationUpdate"];
+                if (val == null) return 200;
+                return ((int)(val));
+            }
+            set { this["zoomLevelOnLocationUpdate"] = value; }
+        }
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
