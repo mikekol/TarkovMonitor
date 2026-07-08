@@ -107,17 +107,29 @@ namespace TarkovMonitor
 
         public static async Task Send(List<JsonObject> messages)
         {
-            var remoteid = Properties.Settings.Default.remoteId;
-            if (remoteid == null || remoteid == "")
+            var remoteIdString = Properties.Settings.Default.remoteId;
+            if (remoteIdString == null || remoteIdString == "")
             {
                 return;
             }
+
             await VerifyClient();
+
+            var remotes = GetAllRemotes();
+            if (remotes.Count == 0)
+            {
+                return;
+            }
+
             foreach (var message in messages)
             {
-                message["sessionID"] = remoteid;
-                await socket.SendInstant(message.ToJsonString());
+                foreach (var remote in remotes)
+                {
+                    message["sessionID"] = remote.Id;
+                    await socket.SendInstant(message.ToJsonString());
+                }
             }
+
             idleTimer.Stop();
             idleTimer.Start();
         }
