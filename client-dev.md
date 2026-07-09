@@ -266,6 +266,46 @@ Fired when a screenshot is taken in-raid. Position is extracted from the screens
 
 ---
 
+### Remote Map Control
+
+When TarkovMonitor detects a screenshot and extracts player position, it sends a `playerPosition` message to tarkov-dev via WebSocket. The following describes the assumed order of operations and zoom behavior:
+
+#### Map Load and Location Update Flow
+
+1. **Raid starts** — TarkovMonitor tracks raid state
+2. **Map is loaded** — tarkov-dev loads the map via its own raid-start logic
+3. **Screenshot detected** — TarkovMonitor extracts position and map from the screenshot
+4. **Position message sent** — TarkovMonitor broadcasts `playerPosition` via WebSocket:
+   ```json
+   {
+     "type": "command",
+     "data": {
+       "type": "playerPosition",
+       "map": "interchange",
+       "position": {"x": 100, "y": 200, "z": 50},
+       "rotation": 45,
+       "zoomLevel": 0  // Only included if map changed
+     }
+   }
+   ```
+5. **Player location displayed** — tarkov-dev updates the marker on the map
+6. **Map centered on player** — The map pans to the player's location (always happens on each update)
+7. **Zoom applied conditionally** — If `zoomLevel` is included in the message (map has changed), tarkov-dev applies the zoom. Otherwise, the user's manual zoom adjustments are preserved.
+
+#### Zoom Behavior
+
+**When zoom level is applied:**
+- When the map changes between raids (new raid or different map from previous raid)
+- The zoom defaults to the configured `zoomLevelOnLocationUpdate` setting (0-20 Leaflet zoom level; default 0 = see whole map)
+
+**When zoom is NOT touched:**
+- During subsequent position updates on the same map within the same raid
+- Any manual zoom adjustments the user makes on the map are preserved until the map changes
+
+This design allows users to manually adjust zoom for better player icon visibility while ensuring the zoom resets to a sensible default when the context changes (new raid or different map).
+
+---
+
 ### Control Settings
 
 #### `ControlSettings`
