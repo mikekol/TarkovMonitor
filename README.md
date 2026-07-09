@@ -175,6 +175,18 @@ cd TarkovMonitor
 dotnet run
 ```
 
+### Versioning
+
+TarkovMonitor uses **automatic epoch-based versioning** configured in `Directory.Build.props`:
+
+- **Base version:** `2.11.15`
+- **Build suffix:** Number of days since January 1, 2024
+- **Full version format:** `2.11.15.<epoch-days>`
+
+For example, on day 183 of the epoch (around June 22, 2024), the version would be `2.11.15.183`.
+
+This versioning is calculated automatically at build time — no manual version updates needed. Both the assembly version and file version are set this way, so the installed application and installer MSI will always have unique version numbers.
+
 ### Building the MSI Installer
 
 To build the Windows installer:
