@@ -221,56 +221,49 @@ namespace TarkovMonitor
             if (zoomLevel < 0) zoomLevel = 0;
             if (zoomLevel > 20) zoomLevel = 20;
 
-            var messages = new List<JsonObject>();
-
-            // Add position message
-            messages.Add(GetPlayerPositionMessage(e));
-
-            // Add zoom message
-            // TODO: Verify zoom command format with tarkov.dev WebSocket API
-            // If "zoom" is not a valid command type, adjust the data.type value
-            messages.Add(new JsonObject
-            {
-                ["type"] = "command",
-                ["data"] = new JsonObject
-                {
-                    ["type"] = "zoom",
-                    ["value"] = zoomLevel
-                }
-            });
+            // Send position with zoom level included
+            var message = GetPlayerPositionMessage(e, zoomLevel);
 
             try
             {
-                await Send(messages);
+                await Send(message);
             }
             catch (Exception ex)
             {
-                ExceptionThrown?.Invoke(messages, new(ex, "sending player position and zoom"));
+                ExceptionThrown?.Invoke(message, new(ex, "sending player position and zoom"));
             }
         }
 
-        public static JsonObject GetPlayerPositionMessage(PlayerPositionEventArgs e)
+        public static JsonObject GetPlayerPositionMessage(PlayerPositionEventArgs e, int? zoomLevel = null)
         {
             var map = TarkovDev.Maps.Find(m => m.nameId == e.RaidInfo.Map)?.normalizedName;
             if (map == null && e.RaidInfo.Map != null)
             {
                 throw new Exception($"Map {e.RaidInfo.Map} not found");
             }
+            var data = new JsonObject
+            {
+                ["type"] = "playerPosition",
+                ["map"] = map,
+                ["position"] = new JsonObject
+                {
+                    ["x"] = e.Position.X,
+                    ["y"] = e.Position.Y,
+                    ["z"] = e.Position.Z,
+                },
+                ["rotation"] = e.Rotation,
+            };
+
+            // Include zoom level if provided
+            if (zoomLevel.HasValue)
+            {
+                data["zoomLevel"] = zoomLevel.Value;
+            }
+
             return new JsonObject
             {
                 ["type"] = "command",
-                ["data"] = new JsonObject
-                {
-                    ["type"] = "playerPosition",
-                    ["map"] = map,
-                    ["position"] = new JsonObject
-                    {
-                        ["x"] = e.Position.X,
-                        ["y"] = e.Position.Y,
-                        ["z"] = e.Position.Z,
-                    },
-                    ["rotation"] = e.Rotation,
-                }
+                ["data"] = data,
             };
         }
 
