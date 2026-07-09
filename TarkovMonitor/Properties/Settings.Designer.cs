@@ -133,11 +133,11 @@ namespace TarkovMonitor.Properties {
 
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("200")]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
         public int zoomLevelOnLocationUpdate {
             get {
                 object val = this["zoomLevelOnLocationUpdate"];
-                if (val == null) return 200;
+                if (val == null) return 0;
                 return ((int)(val));
             }
             set { this["zoomLevelOnLocationUpdate"] = value; }

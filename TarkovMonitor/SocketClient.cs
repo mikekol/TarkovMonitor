@@ -13,6 +13,7 @@ namespace TarkovMonitor
         private static ClientWebSocket socket;
         private static CancellationTokenSource cancellationToken;
         private static Task receiveTask;
+        private static string _lastMapName;
         private static System.Timers.Timer idleTimer = new()
         {
             AutoReset = false,
@@ -216,12 +217,19 @@ namespace TarkovMonitor
                 return;
             }
 
-            // Get zoom level from settings (default 15)
-            int zoomLevel = Properties.Settings.Default.zoomLevelOnLocationUpdate;
-            if (zoomLevel < 0) zoomLevel = 0;
-            if (zoomLevel > 20) zoomLevel = 20;
+            // Determine if map changed (new raid or map switch)
+            bool mapChanged = map != _lastMapName;
+            _lastMapName = map;
 
-            // Send position with zoom level included
+            // Only include zoom when map changes; respects user's manual adjustments within the same map
+            int? zoomLevel = null;
+            if (mapChanged)
+            {
+                zoomLevel = Properties.Settings.Default.zoomLevelOnLocationUpdate;
+                if (zoomLevel < 0) zoomLevel = 0;
+                if (zoomLevel > 20) zoomLevel = 20;
+            }
+
             var message = GetPlayerPositionMessage(e, zoomLevel);
 
             try
