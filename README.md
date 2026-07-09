@@ -1,4 +1,4 @@
-# TarkovMonitor
+# TarkovMonitor (UVB76 Fork)
 
 [![build-dev](https://github.com/the-hideout/TarkovMonitor/actions/workflows/build-dev.yml/badge.svg)](https://github.com/the-hideout/TarkovMonitor/actions/workflows/build-dev.yml)
 
@@ -7,6 +7,8 @@
 ![image](https://github.com/the-hideout/TarkovMonitor/assets/1557581/99602d29-98c8-4738-8757-0fa763d54e9a)
 
 TarkovMonitor is an Escape from Tarkov companion application that provides useful audio notifications, can automatically update your task progress on Tarkov Tracker, and includes other helpful features.
+
+> **Note:** This is the **UVB76 fork**, a maintained version with architectural improvements and enhanced Tarkov.dev integration. See [Changes in this Fork](#changes-in-this-fork) below for details.
 
 ## Features
 
@@ -35,6 +37,80 @@ TarkovMonitor is an Escape from Tarkov companion application that provides usefu
    - Displays "Time in Raid"
    - Displays countdown for "Runthrough time"
    - Display countdown for Scav cooldown time
+
+## Changes in this Fork
+
+This fork includes significant architectural improvements and enhanced features compared to the original the-hideout/TarkovMonitor. All changes maintain backward compatibility while providing a more robust and maintainable codebase.
+
+### Architecture Refactoring (gRPC Service/Client Model)
+
+The original monolithic WinForms application has been refactored into a **service-first architecture** with gRPC-based inter-process communication:
+
+- **TarkovMonitor.Service** (new) - Headless Windows service that:
+  - Monitors EFT game log files continuously in the background
+  - Broadcasts typed game events via gRPC streaming (RaidStarted, TaskCompleted, FleaSold, etc.)
+  - Manages per-profile TarkovTracker configuration and API integration
+  - Persists configuration to JSON instead of Windows Registry (no LocalSystem privileges required)
+  - Runs as NetworkService or LocalService (user-selectable during install, not LocalSystem)
+  - Automatically starts with Windows and persists across UI restarts
+
+- **TarkovMonitor.Core** (new) - Shared library containing:
+  - GameWatcher, LogMonitor, and log parsing logic (moved from UI)
+  - Core event types and data models
+  - CoreJsonContext for AOT-safe JSON serialization
+  - TarkovTrackerClient for API communication
+  - No WinForms dependency, usable by headless service
+
+- **TarkovMonitor** (refactored) - WinForms UI that:
+  - Acts purely as a gRPC client to the service
+  - No longer monitors logs directly (service owns that responsibility)
+  - Connects automatically on startup with 5-second retry logic
+  - Reconnects transparently if service restarts
+  - Receives typed game events and updates UI accordingly
+  - Manages UI-specific features (audio notifications, visual timers, screenshots)
+
+**Benefits:**
+- Service runs continuously, even when UI is closed
+- Multiple UI instances can connect to one service
+- Service can be debugged/restarted independently
+- Lower privilege requirements (no LocalSystem)
+- Cleaner separation of concerns
+- Easier to test and maintain
+
+### Enhanced Tarkov.dev Integration
+
+Multiple new features for controlling Tarkov.dev browser instances:
+
+#### Multi-Remote Control (NEW)
+- Control **multiple Tarkov.dev browser instances simultaneously** across multiple monitors/windows
+- Enter comma or semicolon-separated remote IDs in settings (e.g., `abc123,def456`)
+- All configured instances receive identical position and zoom commands when you interact with TarkovMonitor
+- Consolidated settings in single "Tarkov.dev Website Remote" section for cleaner UI
+
+#### Auto-Zoom on Location Detection (NEW)
+- When screenshot-to-location feature detects your player position, **automatically zoom the map** for easier target spotting
+- Configurable zoom level: 100-400% (default: 200%)
+- Smooth integration with existing screenshot position detection
+
+#### Improved WebSocket Communication
+- Switched from Websocket.Client library to raw System.Net.WebSockets for better control
+- Proper user-agent header identification: `TarkovMonitor/[version]`
+- Enhanced WebSocket error handling with automatic reconnection
+- Proper cancellation token management for clean shutdown
+
+### Configuration Management
+
+- **No Registry Writes** - All configuration now stored in `appsettings.json` (service) and `Properties.Settings` (UI)
+- **Per-Profile Support** - TarkovTracker tokens and domains can be configured per EFT profile
+- **Service Persistence** - Configuration persists across service restarts
+- **Flexible Permissions** - No longer requires LocalSystem; works as NetworkService or LocalService
+
+### Other Improvements
+
+- **.NET 10** - Upgraded from .NET 6 to .NET 10 (modern runtime, performance improvements)
+- **Debugging Infrastructure** - Added verbose logging and test server for local development
+- **Cleaner CI/CD** - GitHub Actions workflows for automated builds and PR assistance
+- **Better Logging** - Comprehensive service logging for troubleshooting
 
 ## Installation
 
