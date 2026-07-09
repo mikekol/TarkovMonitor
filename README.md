@@ -24,6 +24,8 @@ TarkovMonitor is an Escape from Tarkov companion application that provides usefu
 - Connect to the Tarkov.dev website via remote code
     - Automatically load the website map for the map you're playing on
     - Take an in-game screenshot and show your position on the website map
+    - **Control multiple Tarkov.dev browser instances** - Use the same position and zoom commands across multiple monitors or windows
+    - **Auto-zoom on location detection** - Automatically zoom in when your player position is detected via screenshot (configurable zoom level: 100-400%)
 - Connect to Tarkov Tracker via API token
     - Automatically mark quests as complete as you complete them
 - Statistics (all stored locally on your computer)
@@ -60,7 +62,69 @@ Tarkov Tracker only automatically marks a quest as complete if it's running when
 
 The [Tarkov.dev website](https://tarkov.dev) has a "remote control" feature that allows the user to navigate to different pages in a browser window by using a different device. The original use case for this was to have the Tarkov.dev website open on a second monitor as you're playing the game and then using your cellphone as the remote control to load different pages on the website shown on the monitor without having to alt+tab out of the game.
 
-TarkovMonitor can act as the "control" device, which allows it to do things like opening the corresponding map page on the website when you're loading into a raid and show your position (and rotation) on the map when you take a screenshot. To enable this integration, open the Tarkov.dev website, click the `Click to connect` button in the lower left, copy the `ID for remote control` shown in that box, and paste it in the Tarkov Monitor remote id settings. If you keep your browser window open, Tarkov Monitor should be set to control the Tarkov.dev site. Note that if you reload the Tarkov.dev site (including by restarting your browser), you'll need to click the `Click to connect` button again, but the remote code should remain the same.
+TarkovMonitor can act as the "control" device, which allows it to do things like opening the corresponding map page on the website when you're loading into a raid and show your position (and rotation) on the map when you take a screenshot. To enable this integration, open the Tarkov.dev website, click the `Click to connect` button in the lower left, copy the `ID for remote control` shown in that box, and paste it in the Tarkov Monitor "Remote Browser IDs" settings field in the Tarkov.dev Website Remote section.
+
+#### Multiple Browser Instances
+
+TarkovMonitor supports controlling multiple Tarkov.dev browser instances simultaneously. This is useful if you have multiple monitors or windows open showing different maps or views. Simply enter multiple remote IDs separated by commas or semicolons in the "Remote Browser IDs" field (e.g., `abc123,def456`). When you interact with TarkovMonitor (e.g., take a screenshot to show your position), all configured instances receive the same commands.
+
+#### Auto-Zoom on Location Detection
+
+When you take a screenshot to show your player position, TarkovMonitor can automatically zoom into the map to make your position easier to find. This is configurable from 100% to 400% zoom. The default is 200%. Adjust the "Zoom level when location detected via screenshot" slider in the Tarkov.dev Website Remote settings to your preference.
+
+**Note:** If you reload the Tarkov.dev site (including by restarting your browser), you'll need to click the `Click to connect` button again, but the remote code should remain the same.
+
+## Building from Source
+
+TarkovMonitor is built with **.NET 10** and requires Visual Studio 2022 or later, or the .NET 10 SDK installed.
+
+### Prerequisites
+
+- [.NET 10 SDK](https://dotnet.microsoft.com/download) or later
+- Visual Studio 2022 with .NET desktop development workload, OR
+- Any text editor + command line tools
+
+### Quick Build
+
+```bash
+# Clone the repository
+git clone https://github.com/the-hideout/TarkovMonitor.git
+cd TarkovMonitor
+
+# Restore dependencies and build
+dotnet build
+
+# Run the UI (service must be running separately for full functionality)
+cd TarkovMonitor
+dotnet run
+```
+
+### Building the MSI Installer
+
+To build the Windows installer:
+
+1. Install WiX Toolset globally:
+   ```bash
+   dotnet tool install --global wix --version "4.*"
+   ```
+
+2. Build the installer:
+   ```bash
+   .\Scripts\Build-Installer.ps1
+   ```
+
+The built MSI will be in the `dist/` directory as `TarkovMonitor-<version>.msi`.
+
+### Architecture Overview
+
+TarkovMonitor is a Windows desktop application built with a gRPC-based service/client architecture:
+
+- **TarkovMonitor.Service** - Headless Windows service that monitors game log files and broadcasts events
+- **TarkovMonitor** - WinForms UI that connects to the service as a gRPC client
+- **TarkovMonitor.Core** - Shared library with game event types and log parsing logic
+- **TarkovMonitor.Installer** - WiX 4 MSI installer project
+
+The service runs in the background and persists even when the UI is closed. The UI can be launched and closed independently, and reconnects to the service automatically.
 
 ## FAQ
 
@@ -88,7 +152,11 @@ PMC level information is not logged by the game, so Tarkov Monitor cannot update
 
 ### What is the "Tarkov.dev Website Remote" option for?
 
-The Tarkov.dev website has a feature that allows the user to "control" the website using another device. The typical use case is for someone to have the Tarkov.dev website loaded in a browser on their second monitor and then use their phone as the second device to load pages on the website without having to alt+tab out of the game. TarkovMonitor can act as the remote device and do things like load the Tarkov.dev map page for the map you're loading into a raid on. Linking the remote also enables showing your position on the Tarkov.dev map when you take a screenshot. To get the remote code for Tarkov.dev, just open the Tarkov.dev website in your browser, click the "Click to connect" box in the lower left, and then copy and paste that code into the Remote ID setting box in Tarkov Monitor.
+The Tarkov.dev website has a feature that allows the user to "control" the website using another device. The typical use case is for someone to have the Tarkov.dev website loaded in a browser on their second monitor and then use their phone as the second device to load pages on the website without having to alt+tab out of the game. TarkovMonitor can act as the remote device and do things like load the Tarkov.dev map page for the map you're loading into a raid on. Linking the remote also enables showing your position on the Tarkov.dev map when you take a screenshot.
+
+To get the remote code for Tarkov.dev, open the Tarkov.dev website in your browser, click the "Click to connect" box in the lower left, and then copy and paste that code into the "Remote Browser IDs" setting in Tarkov Monitor's Tarkov.dev Website Remote section.
+
+TarkovMonitor also supports controlling multiple Tarkov.dev instances simultaneously—just enter multiple remote IDs separated by commas in the field. Additionally, when you take a screenshot to show your player position, TarkovMonitor can automatically zoom the map for you, making it easier to spot your position icon. Configure the zoom level (100-400%) in the same settings section.
 
 ### What is the "Submit Queue Time Data" option for?
 
