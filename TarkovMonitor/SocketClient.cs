@@ -216,10 +216,10 @@ namespace TarkovMonitor
                 return;
             }
 
-            // Get zoom level from settings (default 200)
+            // Get zoom level from settings (default 15)
             int zoomLevel = Properties.Settings.Default.zoomLevelOnLocationUpdate;
-            if (zoomLevel < 100) zoomLevel = 100;
-            if (zoomLevel > 400) zoomLevel = 400;
+            if (zoomLevel < 0) zoomLevel = 0;
+            if (zoomLevel > 20) zoomLevel = 20;
 
             var messages = new List<JsonObject>();
 
