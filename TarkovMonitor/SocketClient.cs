@@ -162,9 +162,9 @@ namespace TarkovMonitor
             {
                 foreach (var remote in remotes)
                 {
-                    // Clone the message to avoid modifying the same object reference
-                    // across multiple remotes, which could cause race conditions
-                    var messageForRemote = new JsonObject(message);
+                    // Deep clone the message to avoid sharing JsonNode objects across remotes
+                    var json = message.ToJsonString();
+                    var messageForRemote = (JsonObject)JsonNode.Parse(json)!;
                     messageForRemote["sessionID"] = remote.Id;
                     await SendSocketMessage(messageForRemote);
                 }
