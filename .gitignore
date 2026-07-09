@@ -238,6 +238,7 @@ ClientBin/
 *.jfm
 *.pfx
 *.publishsettings
+.superpowers/
 orleans.codegen.cs
 
 # Including strong name files can present a security risk
@@ -363,6 +364,5 @@ MigrationBackup/
 FodyWeavers.xsd
 
 secrets/
-
 handoff.md
 dist/
