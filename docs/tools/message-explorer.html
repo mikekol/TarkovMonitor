@@ -224,6 +224,12 @@ function connect() {
   ws.onmessage = (e) => {
     let parsed;
     try { parsed = JSON.parse(e.data); } catch { parsed = { _unparsed: e.data }; }
+
+    // Keep-alive: respond to server pings
+    if (parsed.type === 'ping') {
+      ws.send(JSON.stringify({ type: 'pong' }));
+    }
+
     parsed._dir = 'in';
     parsed._raw = e.data;
     addMessage(parsed);
