@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>TarkovMonitor — Message Explorer</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #1a1b1e;
+    --surface:  #25262b;
+    --border:   #373a40;
+    --text:     #c1c2c5;
+    --muted:    #5c5f66;
+    --accent:   #4dabf7;
+    --green:    #51cf66;
+    --red:      #ff6b6b;
+    --yellow:   #ffd43b;
+    --orange:   #ff922b;
+
+    --json-key:    #74c0fc;
+    --json-str:    #a9e34b;
+    --json-num:    #ffa94d;
+    --json-bool:   #ff8787;
+    --json-null:   #868e96;
+  }
+
+  body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; font-size: 13px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* ── Header ─────────────────────────────────────────────── */
+  header { padding: 10px 14px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  header h1 { font-size: 14px; font-weight: 600; color: #fff; white-space: nowrap; }
+  header h1 span { color: var(--accent); }
+
+  .connect-row { display: flex; align-items: center; gap: 8px; flex: 1; }
+  .connect-row label { color: var(--muted); white-space: nowrap; }
+  .connect-row input { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 4px; font-size: 13px; width: 220px; }
+  .connect-row input:focus { outline: none; border-color: var(--accent); }
+
+  .suffix-row { display: flex; align-items: center; gap: 6px; }
+  .suffix-row label { color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .suffix-row select { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 4px 6px; border-radius: 4px; font-size: 12px; }
+
+  button { padding: 5px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; transition: opacity .15s; }
+  button:hover { opacity: .85; }
+  button:disabled { opacity: .4; cursor: default; }
+
+  .btn-connect    { background: var(--green);  color: #1a1b1e; }
+  .btn-disconnect { background: var(--red);    color: #fff; }
+  .btn-clear      { background: var(--border); color: var(--text); }
+  .btn-export     { background: var(--border); color: var(--text); }
+
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0; transition: background .3s; }
+  .status-dot.connected    { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .status-dot.connecting   { background: var(--yellow); }
+  .status-dot.disconnected { background: var(--red); }
+  .status-label { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+  /* ── Toolbar ─────────────────────────────────────────────── */
+  .toolbar { padding: 6px 14px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .toolbar input[type="text"] { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 4px; font-size: 12px; width: 200px; }
+  .toolbar input[type="text"]:focus { outline: none; border-color: var(--accent); }
+  .toolbar label { color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 4px; cursor: pointer; }
+  .toolbar select { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 4px 6px; border-radius: 4px; font-size: 12px; }
+
+  .stats { margin-left: auto; display: flex; gap: 14px; font-size: 11px; color: var(--muted); }
+  .stats span b { color: var(--text); }
+
+  /* ── Main layout ─────────────────────────────────────────── */
+  .main { display: flex; flex: 1; overflow: hidden; }
+
+  /* ── Message list ────────────────────────────────────────── */
+  .msg-list { flex: 1; overflow-y: auto; padding: 6px 0; }
+
+  .msg-item { display: flex; gap: 10px; padding: 5px 14px; border-bottom: 1px solid transparent; cursor: pointer; transition: background .1s; }
+  .msg-item:hover { background: rgba(255,255,255,.03); }
+  .msg-item.selected { background: rgba(77,171,247,.08); border-left: 2px solid var(--accent); padding-left: 12px; }
+  .msg-item.highlight { border-left: 2px solid var(--orange); padding-left: 12px; }
+
+  .msg-time { color: var(--muted); font-size: 11px; font-family: monospace; white-space: nowrap; padding-top: 1px; }
+  .msg-dir  { font-size: 10px; font-weight: 700; width: 16px; text-align: center; flex-shrink: 0; }
+  .msg-dir.in  { color: var(--green); }
+  .msg-dir.out { color: var(--accent); }
+  .msg-badge { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 3px; white-space: nowrap; flex-shrink: 0; background: var(--border); color: var(--text); align-self: flex-start; margin-top: 1px; }
+  .msg-badge.playerPosition { background: #1c4a2e; color: var(--green); }
+  .msg-badge.map            { background: #1c3a5c; color: var(--accent); }
+  .msg-badge.ping           { background: #2c2c2c; color: var(--muted); }
+  .msg-badge.pong           { background: #2c2c2c; color: var(--muted); }
+  .msg-preview { color: var(--muted); font-size: 11px; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+
+  /* ── Detail panel ────────────────────────────────────────── */
+  .detail { width: 420px; border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+  .detail-header { padding: 8px 12px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .detail-header h3 { font-size: 12px; font-weight: 600; color: var(--text); }
+  .detail-actions { display: flex; gap: 6px; }
+  .btn-copy { background: var(--border); color: var(--text); font-size: 11px; padding: 3px 8px; }
+
+  .detail-body { flex: 1; overflow-y: auto; padding: 10px 12px; font-family: monospace; font-size: 12px; line-height: 1.6; }
+  .detail-empty { display: flex; align-items: center; justify-content: center; flex: 1; color: var(--muted); font-size: 12px; font-style: italic; }
+
+  /* JSON syntax */
+  .jk { color: var(--json-key); }
+  .js { color: var(--json-str); }
+  .jn { color: var(--json-num); }
+  .jb { color: var(--json-bool); }
+  .jz { color: var(--json-null); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 8px; color: var(--muted); }
+  .empty-state svg { opacity: .3; }
+  .empty-state p { font-size: 12px; }
+</style>
+</head>
+<body>
+
+<!-- Header / Connection -->
+<header>
+  <h1>Tarkov<span>Monitor</span> · Message Explorer</h1>
+  <div class="connect-row">
+    <label>Session ID</label>
+    <input id="sessionId" type="text" placeholder="your-remote-id" />
+    <div class="suffix-row">
+      <label>Connect as</label>
+      <select id="suffix">
+        <option value="">browser (receive commands)</option>
+        <option value="-tm">-tm (TarkovMonitor sender)</option>
+        <option value="-spy">-spy (passive listener)</option>
+        <option value="custom">custom…</option>
+      </select>
+      <input id="customSuffix" type="text" placeholder="-custom" style="display:none;width:90px;" />
+    </div>
+    <button class="btn-connect" id="btnConnect" onclick="connect()">Connect</button>
+    <button class="btn-disconnect" id="btnDisconnect" onclick="disconnect()" disabled>Disconnect</button>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px;">
+    <div class="status-dot" id="statusDot"></div>
+    <span class="status-label" id="statusLabel">Disconnected</span>
+  </div>
+</header>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <input type="text" id="filterText" placeholder="Filter messages…" oninput="renderList()" />
+  <label>Type:
+    <select id="filterType" onchange="renderList()">
+      <option value="">all</option>
+      <option value="playerPosition">playerPosition</option>
+      <option value="map">map</option>
+      <option value="ping">ping/pong</option>
+      <option value="command">command</option>
+    </select>
+  </label>
+  <label><input type="checkbox" id="autoScroll" checked /> Auto-scroll</label>
+  <label><input type="checkbox" id="hidePing" checked onchange="renderList()" /> Hide ping/pong</label>
+  <button class="btn-clear" onclick="clearMessages()">Clear</button>
+  <button class="btn-export" onclick="exportMessages()">Export JSON</button>
+  <div class="stats">
+    <span>Total: <b id="statTotal">0</b></span>
+    <span>Shown: <b id="statShown">0</b></span>
+    <span>Last: <b id="statLast">—</b></span>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div class="msg-list" id="msgList">
+    <div class="empty-state" id="emptyState">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M8 9h8M8 13h6M6 20l-3 1 1-3 10-10 2 2L6 20z"/>
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+      </svg>
+      <p>Connect to start capturing messages</p>
+    </div>
+  </div>
+
+  <div class="detail" id="detailPanel">
+    <div class="detail-header">
+      <h3 id="detailTitle">No message selected</h3>
+      <div class="detail-actions">
+        <button class="btn-copy" onclick="copyDetail()">Copy</button>
+      </div>
+    </div>
+    <div class="detail-empty" id="detailEmpty">Select a message to inspect</div>
+    <div class="detail-body" id="detailBody" style="display:none"></div>
+  </div>
+</div>
+
+<script>
+// ── State ────────────────────────────────────────────────────
+let ws = null;
+let messages = [];
+let selectedIdx = null;
+
+// ── WebSocket ────────────────────────────────────────────────
+function getUrl() {
+  const id = document.getElementById('sessionId').value.trim();
+  const suffixSel = document.getElementById('suffix').value;
+  const suffix = suffixSel === 'custom'
+    ? document.getElementById('customSuffix').value.trim()
+    : suffixSel;
+  return `wss://socket.tarkov.dev?sessionid=${id}${suffix}`;
+}
+
+function connect() {
+  const id = document.getElementById('sessionId').value.trim();
+  if (!id) { alert('Enter a session ID first.'); return; }
+
+  setStatus('connecting');
+  document.getElementById('btnConnect').disabled = true;
+
+  const url = getUrl();
+  ws = new WebSocket(url);
+
+  ws.onopen = () => {
+    setStatus('connected');
+    document.getElementById('btnDisconnect').disabled = false;
+    addMessage({ _dir: 'sys', _raw: `Connected to ${url}`, type: 'sys' });
+  };
+
+  ws.onmessage = (e) => {
+    let parsed;
+    try { parsed = JSON.parse(e.data); } catch { parsed = { _unparsed: e.data }; }
+    parsed._dir = 'in';
+    parsed._raw = e.data;
+    addMessage(parsed);
+  };
+
+  ws.onerror = () => {
+    addMessage({ _dir: 'sys', _raw: 'WebSocket error', type: 'error' });
+  };
+
+  ws.onclose = (e) => {
+    setStatus('disconnected');
+    document.getElementById('btnConnect').disabled = false;
+    document.getElementById('btnDisconnect').disabled = true;
+    addMessage({ _dir: 'sys', _raw: `Disconnected (code ${e.code})`, type: 'sys' });
+  };
+}
+
+function disconnect() {
+  if (ws) { ws.close(); ws = null; }
+}
+
+// ── Messages ─────────────────────────────────────────────────
+function addMessage(msg) {
+  msg._ts = new Date();
+  msg._idx = messages.length;
+  messages.push(msg);
+  updateStats();
+  renderList();
+
+  // Auto-scroll
+  if (document.getElementById('autoScroll').checked) {
+    const list = document.getElementById('msgList');
+    list.scrollTop = list.scrollHeight;
+  }
+}
+
+function clearMessages() {
+  messages = [];
+  selectedIdx = null;
+  renderList();
+  showDetail(null);
+  updateStats();
+}
+
+// ── Filtering ────────────────────────────────────────────────
+function getVisible() {
+  const text = document.getElementById('filterText').value.toLowerCase();
+  const type = document.getElementById('filterType').value;
+  const hidePing = document.getElementById('hidePing').checked;
+
+  return messages.filter(m => {
+    // Hide ping/pong
+    if (hidePing && (m.type === 'ping' || m.type === 'pong')) return false;
+    // Type filter
+    if (type) {
+      if (type === 'ping' && m.type !== 'ping' && m.type !== 'pong') return false;
+      if (type !== 'ping' && type !== 'command') {
+        // Match on data.type for commands
+        const dataType = m?.data?.type ?? m?.type;
+        if (!String(dataType ?? '').includes(type)) return false;
+      }
+      if (type === 'command' && m.type !== 'command') return false;
+    }
+    // Text filter
+    if (text && !m._raw.toLowerCase().includes(text)) return false;
+    return true;
+  });
+}
+
+// ── Rendering ────────────────────────────────────────────────
+function renderList() {
+  const visible = getVisible();
+  const list = document.getElementById('msgList');
+  const empty = document.getElementById('emptyState');
+
+  document.getElementById('statShown').textContent = visible.length;
+
+  if (messages.length === 0) {
+    empty.style.display = 'flex';
+    // Remove all msg-items
+    Array.from(list.querySelectorAll('.msg-item')).forEach(el => el.remove());
+    return;
+  }
+  empty.style.display = 'none';
+
+  // Rebuild list (simple approach — fine for debugging tool)
+  Array.from(list.querySelectorAll('.msg-item')).forEach(el => el.remove());
+
+  visible.forEach(m => {
+    const el = document.createElement('div');
+    el.className = 'msg-item' + (m._idx === selectedIdx ? ' selected' : '');
+
+    const dataType = m?.data?.type;
+    const msgType = dataType ?? m?.type ?? '?';
+    if (dataType === 'playerPosition') el.classList.add('highlight');
+
+    el.innerHTML = `
+      <span class="msg-time">${fmtTime(m._ts)}</span>
+      <span class="msg-dir ${m._dir === 'in' ? 'in' : m._dir === 'sys' ? '' : 'out'}">${m._dir === 'in' ? '↓' : m._dir === 'sys' ? '·' : '↑'}</span>
+      <span class="msg-badge ${msgType}">${msgType}</span>
+      <span class="msg-preview">${preview(m)}</span>
+    `;
+    el.onclick = () => selectMessage(m._idx);
+    list.appendChild(el);
+  });
+}
+
+function selectMessage(idx) {
+  selectedIdx = idx;
+  renderList();
+  showDetail(messages[idx]);
+}
+
+function showDetail(m) {
+  const title = document.getElementById('detailTitle');
+  const empty = document.getElementById('detailEmpty');
+  const body  = document.getElementById('detailBody');
+
+  if (!m) {
+    title.textContent = 'No message selected';
+    empty.style.display = 'flex';
+    body.style.display = 'none';
+    return;
+  }
+
+  const dataType = m?.data?.type ?? m?.type ?? 'message';
+  title.textContent = `${dataType} · ${fmtTime(m._ts)}`;
+  empty.style.display = 'none';
+  body.style.display = 'block';
+
+  // Pretty-print the raw JSON (excluding internal _ fields)
+  const clean = Object.fromEntries(Object.entries(m).filter(([k]) => !k.startsWith('_')));
+  body.innerHTML = syntaxHighlight(JSON.stringify(clean, null, 2));
+}
+
+function copyDetail() {
+  if (selectedIdx === null) return;
+  const m = messages[selectedIdx];
+  const clean = Object.fromEntries(Object.entries(m).filter(([k]) => !k.startsWith('_')));
+  navigator.clipboard.writeText(JSON.stringify(clean, null, 2));
+}
+
+function exportMessages() {
+  const clean = messages.map(m => Object.fromEntries(Object.entries(m).filter(([k]) => !k.startsWith('_') || k === '_ts')));
+  const blob = new Blob([JSON.stringify(clean, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `tarkov-messages-${Date.now()}.json`;
+  a.click();
+}
+
+// ── Helpers ──────────────────────────────────────────────────
+function setStatus(s) {
+  const dot = document.getElementById('statusDot');
+  const lbl = document.getElementById('statusLabel');
+  dot.className = `status-dot ${s}`;
+  lbl.textContent = s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function updateStats() {
+  document.getElementById('statTotal').textContent = messages.length;
+  const last = messages.filter(m => m._dir !== 'sys').at(-1);
+  document.getElementById('statLast').textContent = last ? fmtTime(last._ts) : '—';
+}
+
+function fmtTime(d) {
+  if (!d) return '';
+  return d.toLocaleTimeString('en-US', { hour12: false }) + '.' + String(d.getMilliseconds()).padStart(3, '0');
+}
+
+function preview(m) {
+  if (m._dir === 'sys') return m._raw;
+  const d = m?.data;
+  if (!d) return m._raw?.slice(0, 100) ?? '';
+  if (d.type === 'playerPosition') {
+    const p = d.position ?? {};
+    const zoom = d.zoomLevel !== undefined ? `  zoom=${d.zoomLevel}` : '';
+    return `map=${d.map}  x=${fmt(p.x)} y=${fmt(p.y)} z=${fmt(p.z)}  rot=${fmt(d.rotation)}°${zoom}`;
+  }
+  if (d.type === 'map') return `navigate → ${d.value}`;
+  return JSON.stringify(d).slice(0, 120);
+}
+
+function fmt(n) { return n !== undefined ? Number(n).toFixed(1) : '?'; }
+
+function syntaxHighlight(json) {
+  return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, match => {
+    if (/^"/.test(match)) {
+      if (/:$/.test(match)) return `<span class="jk">${match}</span>`;
+      return `<span class="js">${match}</span>`;
+    }
+    if (/true|false/.test(match)) return `<span class="jb">${match}</span>`;
+    if (/null/.test(match)) return `<span class="jz">${match}</span>`;
+    return `<span class="jn">${match}</span>`;
+  });
+}
+
+// ── Suffix selector ──────────────────────────────────────────
+document.getElementById('suffix').addEventListener('change', function() {
+  document.getElementById('customSuffix').style.display = this.value === 'custom' ? 'inline-block' : 'none';
+});
+
+// Enter key to connect
+document.getElementById('sessionId').addEventListener('keydown', e => {
+  if (e.key === 'Enter') connect();
+});
+</script>
+</body>
+</html>
