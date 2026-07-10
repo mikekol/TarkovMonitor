@@ -503,6 +503,8 @@ namespace TarkovMonitor
 
         private void Eft_MapLoading_NavigateToMap(object? sender, RaidInfoEventArgs e)
         {
+            // Reset last map so first screenshot in any new raid always triggers zoom
+            SocketClient.ResetLastMap();
             if (!Properties.Settings.Default.autoNavigateMap) return;
             var map = TarkovDev.Maps.Find(m => m.nameId == e.RaidInfo.Map);
             if (map == null) return;

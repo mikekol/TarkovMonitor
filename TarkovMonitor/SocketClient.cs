@@ -142,6 +142,11 @@ namespace TarkovMonitor
             return _remotes;
         }
 
+        public static void ResetLastMap()
+        {
+            _lastMapName = null;
+        }
+
         public static async Task Send(List<JsonObject> messages)
         {
             var remoteIdString = Properties.Settings.Default.remoteId;
