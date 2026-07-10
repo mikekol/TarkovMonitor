@@ -726,6 +726,7 @@
         Properties.Settings.Default.remoteId = remoteIdInput;
         Properties.Settings.Default.zoomLevelOnLocationUpdate = zoomLevelInput;
         Properties.Settings.Default.Save();
+        SocketClient.ResetLastMap();
         messageLog.AddMessage("Remote settings saved successfully.", "success");
     }
 }

@@ -444,6 +444,9 @@ namespace TarkovMonitor
 
         private async void Eft_PlayerPosition(object? sender, PlayerPositionEventArgs e)
         {
+            // EFT writes the screenshot before the player has spawned; skip uninitialized positions
+            if (e.Position.X == 0 && e.Position.Y == 0 && e.Position.Z == 0) return;
+
             var map = TarkovDev.Maps.Find(m => m.nameId == e.RaidInfo.Map);
             if (map == null)
             {
