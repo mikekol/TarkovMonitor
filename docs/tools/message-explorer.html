@@ -88,8 +88,12 @@
   .msg-badge.pong           { background: #2c2c2c; color: var(--muted); }
   .msg-preview { color: var(--muted); font-size: 11px; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 
+  /* ── Resize handle ──────────────────────────────────────── */
+  .resizer { width: 5px; background: var(--border); cursor: col-resize; flex-shrink: 0; transition: background .15s; }
+  .resizer:hover, .resizer.dragging { background: var(--accent); }
+
   /* ── Detail panel ────────────────────────────────────────── */
-  .detail { width: 420px; border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+  .detail { width: 420px; border-left: none; display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
   .detail-header { padding: 8px 12px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
   .detail-header h3 { font-size: 12px; font-weight: 600; color: var(--text); }
   .detail-actions { display: flex; gap: 6px; }
@@ -177,7 +181,7 @@
 
 <!-- Main -->
 <div class="main">
-  <div class="msg-list" id="msgList">
+  <div class="msg-list" id="msgList" style="min-width:200px;">
     <div class="empty-state" id="emptyState">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M8 9h8M8 13h6M6 20l-3 1 1-3 10-10 2 2L6 20z"/>
@@ -187,6 +191,7 @@
     </div>
   </div>
 
+  <div class="resizer" id="resizer"></div>
   <div class="detail" id="detailPanel">
     <div class="detail-header">
       <h3 id="detailTitle">No message selected</h3>
@@ -515,6 +520,39 @@ document.getElementById('suffix').addEventListener('change', function() {
 document.getElementById('sessionId').addEventListener('keydown', e => {
   if (e.key === 'Enter') connect();
 });
+
+// ── Resizable panes ──────────────────────────────────────────
+(function() {
+  const resizer = document.getElementById('resizer');
+  const detail  = document.getElementById('detailPanel');
+  const main    = document.querySelector('.main');
+  let startX, startW;
+
+  resizer.addEventListener('mousedown', e => {
+    startX = e.clientX;
+    startW = detail.getBoundingClientRect().width;
+    resizer.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    function onMove(e) {
+      const delta = startX - e.clientX;
+      const newW  = Math.max(200, Math.min(startW + delta, main.getBoundingClientRect().width - 250));
+      detail.style.width = newW + 'px';
+    }
+
+    function onUp() {
+      resizer.classList.remove('dragging');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+})();
 </script>
 </body>
 </html>
