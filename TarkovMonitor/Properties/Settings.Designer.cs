@@ -133,14 +133,26 @@ namespace TarkovMonitor.Properties {
 
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("0")]
-        public int zoomLevelOnLocationUpdate {
+        [global::System.Configuration.DefaultSettingValueAttribute("200")]
+        public int viewRadiusOnLocationUpdate {
             get {
-                object val = this["zoomLevelOnLocationUpdate"];
-                if (val == null) return 0;
+                object val = this["viewRadiusOnLocationUpdate"];
+                if (val == null) return 200;
                 return ((int)(val));
             }
-            set { this["zoomLevelOnLocationUpdate"] = value; }
+            set { this["viewRadiusOnLocationUpdate"] = value; }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool autoZoomOnLocationUpdate {
+            get {
+                object val = this["autoZoomOnLocationUpdate"];
+                if (val == null) return false;
+                return ((bool)(val));
+            }
+            set { this["autoZoomOnLocationUpdate"] = value; }
         }
 
         [global::System.Configuration.UserScopedSettingAttribute()]

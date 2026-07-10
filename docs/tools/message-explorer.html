@@ -127,6 +127,21 @@
   .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 8px; color: var(--muted); }
   .empty-state svg { opacity: .3; }
   .empty-state p { font-size: 12px; }
+
+  /* ── Test Sender ─────────────────────────────────────────── */
+  .sender-panel { padding: 6px 14px; background: #1e2024; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
+  .sender-label { font-size: 11px; font-weight: 600; color: var(--orange); white-space: nowrap; letter-spacing: .04em; }
+  .sender-panel label { color: var(--muted); font-size: 11px; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
+  .sender-panel select { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 3px 6px; border-radius: 4px; font-size: 12px; }
+  .sender-panel input[type="number"] { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 3px 6px; border-radius: 4px; font-size: 12px; width: 72px; }
+  .sender-panel input[type="number"]:focus { outline: none; border-color: var(--accent); }
+  .sender-divider { width: 1px; height: 18px; background: var(--border); flex-shrink: 0; }
+  .btn-randomize { background: var(--border); color: var(--text); font-size: 11px; padding: 3px 8px; }
+  .btn-send-pos  { background: var(--orange); color: #1a1b1e; font-size: 11px; padding: 3px 10px; font-weight: 600; }
+  .sender-status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+  .sender-status-dot.connected { background: var(--green); box-shadow: 0 0 5px var(--green); }
+  .sender-status-dot.connecting { background: var(--yellow); }
+  #senderStatusText { font-size: 11px; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -177,6 +192,42 @@
     <span>Shown: <b id="statShown">0</b></span>
     <span>Last: <b id="statLast">—</b></span>
   </div>
+</div>
+
+<!-- Test Sender -->
+<div class="sender-panel">
+  <span class="sender-label">↑ SEND TEST</span>
+  <div class="sender-divider"></div>
+  <label>Map:
+    <select id="sendMap" onchange="applyMapDefaults()">
+      <option value="customs">customs</option>
+      <option value="factory">factory</option>
+      <option value="woods">woods</option>
+      <option value="interchange">interchange</option>
+      <option value="reserve">reserve</option>
+      <option value="shoreline">shoreline</option>
+      <option value="lighthouse">lighthouse</option>
+      <option value="streets-of-tarkov">streets-of-tarkov</option>
+      <option value="ground-zero">ground-zero</option>
+      <option value="the-lab">the-lab</option>
+    </select>
+  </label>
+  <button class="btn-randomize" onclick="sendNavigate()">Navigate</button>
+  <div class="sender-divider"></div>
+  <label>x: <input type="number" id="sendX" value="10" step="1" /></label>
+  <label>y: <input type="number" id="sendY" value="3" step="1" /></label>
+  <label>z: <input type="number" id="sendZ" value="225" step="1" /></label>
+  <label>rot: <input type="number" id="sendRot" value="0" step="1" min="0" max="360" style="width:58px;" /></label>
+  <div class="sender-divider"></div>
+  <label><input type="checkbox" id="sendIncludeRadius" checked /> radius:</label>
+  <input type="number" id="sendRadiusVal" value="200" min="10" max="5000" step="25" />
+  <span style="font-size:11px;color:var(--muted);">m</span>
+  <div class="sender-divider"></div>
+  <button class="btn-randomize" onclick="randomizePosition()">Randomize</button>
+  <button class="btn-send-pos" onclick="sendTestPosition()">Send</button>
+  <div class="sender-divider"></div>
+  <div class="sender-status-dot" id="senderDot"></div>
+  <span id="senderStatusText">sender disconnected</span>
 </div>
 
 <!-- Main -->
@@ -423,8 +474,8 @@ function preview(m) {
   if (!d) return m._raw?.slice(0, 100) ?? '';
   if (d.type === 'playerPosition') {
     const p = d.position ?? {};
-    const zoom = d.zoomLevel !== undefined ? `  zoom=${d.zoomLevel}` : '';
-    return `map=${d.map}  x=${fmt(p.x)} y=${fmt(p.y)} z=${fmt(p.z)}  rot=${fmt(d.rotation)}°${zoom}`;
+    const radius = d.viewRadius !== undefined ? `  radius=${d.viewRadius}m` : '';
+    return `map=${d.map}  x=${fmt(p.x)} y=${fmt(p.y)} z=${fmt(p.z)}  rot=${fmt(d.rotation)}°${radius}`;
   }
   if (d.type === 'map') return `navigate → ${d.value}`;
   return JSON.stringify(d).slice(0, 120);
@@ -509,6 +560,128 @@ function treeExpandAll() {
 function treeCollapseAll() {
   const body = document.getElementById('detailBody');
   body.querySelectorAll('.jt-toggle:not(.collapsed)').forEach(t => t.click());
+}
+
+// ── Test Sender ──────────────────────────────────────────────
+const MAP_DEFAULTS = {
+  'customs':           { x: 10,   y: 3,   z: 225,  jitter: 120 },
+  'factory':           { x: -2,   y: 5,   z: -18,  jitter: 40  },
+  'woods':             { x: -200, y: 8,   z: 160,  jitter: 250 },
+  'interchange':       { x: 120,  y: -3,  z: -7,   jitter: 150 },
+  'reserve':           { x: -15,  y: -10, z: 55,   jitter: 150 },
+  'shoreline':         { x: 395,  y: 5,   z: 25,   jitter: 300 },
+  'lighthouse':        { x: -430, y: 2,   z: -300, jitter: 250 },
+  'streets-of-tarkov': { x: -265, y: 5,   z: 218,  jitter: 200 },
+  'ground-zero':       { x: 115,  y: 5,   z: -10,  jitter: 100 },
+  'the-lab':           { x: 0,    y: -6,  z: 0,    jitter: 80  },
+};
+
+let senderWs = null;
+
+function setSenderStatus(s, text) {
+  const dot = document.getElementById('senderDot');
+  const lbl = document.getElementById('senderStatusText');
+  dot.className = 'sender-status-dot ' + s;
+  lbl.textContent = text;
+}
+
+function applyMapDefaults() {
+  const map = document.getElementById('sendMap').value;
+  const d = MAP_DEFAULTS[map] ?? { x: 0, y: 0, z: 0, jitter: 100 };
+  document.getElementById('sendX').value = d.x;
+  document.getElementById('sendY').value = d.y;
+  document.getElementById('sendZ').value = d.z;
+}
+
+function randomizePosition() {
+  const map = document.getElementById('sendMap').value;
+  const d = MAP_DEFAULTS[map] ?? { x: 0, y: 0, z: 0, jitter: 100 };
+  const j = d.jitter;
+  const rnd = (base, range) => Math.round((base + (Math.random() - 0.5) * 2 * range) * 10) / 10;
+  document.getElementById('sendX').value = rnd(d.x, j);
+  document.getElementById('sendY').value = rnd(d.y, 5);
+  document.getElementById('sendZ').value = rnd(d.z, j);
+  document.getElementById('sendRot').value = Math.round(Math.random() * 360);
+}
+
+function ensureSenderConnected(sessionId) {
+  return new Promise((resolve, reject) => {
+    if (senderWs && senderWs.readyState === WebSocket.OPEN) { resolve(); return; }
+    if (senderWs) { senderWs.close(); senderWs = null; }
+
+    const url = `wss://socket.tarkov.dev?sessionid=${sessionId}-tm`;
+    setSenderStatus('connecting', 'sender connecting…');
+    senderWs = new WebSocket(url);
+
+    senderWs.onopen = () => {
+      setSenderStatus('connected', 'sender ready');
+      resolve();
+    };
+    senderWs.onerror = () => {
+      setSenderStatus('', 'sender error');
+      reject(new Error('Sender WebSocket error'));
+    };
+    senderWs.onclose = () => {
+      setSenderStatus('', 'sender disconnected');
+      senderWs = null;
+    };
+    senderWs.onmessage = (e) => {
+      // Respond to pings from relay
+      try {
+        const p = JSON.parse(e.data);
+        if (p.type === 'ping') senderWs.send(JSON.stringify({ type: 'pong' }));
+      } catch {}
+    };
+  });
+}
+
+async function sendNavigate() {
+  const sessionId = document.getElementById('sessionId').value.trim();
+  if (!sessionId) { alert('Enter a Session ID in the header first.'); return; }
+
+  const map = document.getElementById('sendMap').value;
+
+  try { await ensureSenderConnected(sessionId); } catch (err) { alert('Could not connect sender: ' + err.message); return; }
+
+  const payload = { type: 'command', sessionID: sessionId, data: { type: 'map', value: map } };
+  senderWs.send(JSON.stringify(payload));
+
+  const echo = JSON.parse(JSON.stringify(payload));
+  echo._dir = 'out';
+  echo._raw = JSON.stringify(payload);
+  addMessage(echo);
+}
+
+async function sendTestPosition() {
+  const sessionId = document.getElementById('sessionId').value.trim();
+  if (!sessionId) { alert('Enter a Session ID in the header first.'); return; }
+
+  const map      = document.getElementById('sendMap').value;
+  const x        = parseFloat(document.getElementById('sendX').value) || 0;
+  const y        = parseFloat(document.getElementById('sendY').value) || 0;
+  const z        = parseFloat(document.getElementById('sendZ').value) || 0;
+  const rot      = parseFloat(document.getElementById('sendRot').value) || 0;
+  const withRad  = document.getElementById('sendIncludeRadius').checked;
+  const radius   = parseInt(document.getElementById('sendRadiusVal').value, 10) || 200;
+
+  try {
+    await ensureSenderConnected(sessionId);
+  } catch (err) {
+    alert('Could not connect sender: ' + err.message);
+    return;
+  }
+
+  const data = { type: 'playerPosition', map, position: { x, y, z }, rotation: rot };
+  if (withRad) data.viewRadius = radius;
+
+  const payload = { type: 'command', sessionID: sessionId, data };
+  senderWs.send(JSON.stringify(payload));
+
+  // Echo into the monitor list so we can see it
+  const echo = JSON.parse(JSON.stringify(payload));
+  echo._dir = 'out';
+  echo._raw = JSON.stringify(payload);
+  addMessage(echo);
 }
 
 // ── Suffix selector ──────────────────────────────────────────

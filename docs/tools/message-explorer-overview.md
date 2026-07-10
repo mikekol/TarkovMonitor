@@ -46,7 +46,7 @@ Each row shows:
 - **Timestamp** — `HH:MM:SS.mmm`
 - **Direction** — `↓` incoming / `·` system event
 - **Type badge** — colour-coded: `playerPosition` (green), `map` (blue), `ping`/`pong` (grey), others (default)
-- **Inline preview** — for `playerPosition`: `map=interchange  x=100.0 y=50.0 z=200.0  rot=45.0°  zoom=3`; for `map`: `navigate → rezervbase`
+- **Inline preview** — for `playerPosition`: `map=interchange  x=100.0 y=50.0 z=200.0  rot=45.0°  radius=200m`; for `map`: `navigate → rezervbase`
 
 `playerPosition` rows are additionally highlighted with an orange left border so they stand out during live capture.
 
@@ -87,7 +87,7 @@ The stats bar (top right of toolbar) shows **Total** messages captured, **Shown*
 2. Enter your Remote ID and choose **browser (receive commands)**.
 3. Connect. Start a raid and take a screenshot in TarkovMonitor.
 4. Watch for an orange-highlighted `playerPosition` row to appear.
-5. Click it and inspect the detail panel — confirm whether `zoomLevel` is present in `data`.
+5. Click it and inspect the detail panel — confirm whether `viewRadius` is present in `data` (it appears only on the first screenshot of each raid).
 6. If you want to see what TarkovMonitor is *sending*, reconnect with the `-tm` suffix.
 7. Export the session if you want to share or diff the captures.
 

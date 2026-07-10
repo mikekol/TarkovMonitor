@@ -226,16 +226,16 @@ namespace TarkovMonitor
             bool mapChanged = map != _lastMapName;
             _lastMapName = map;
 
-            // Only include zoom when map changes; respects user's manual adjustments within the same map
-            int? zoomLevel = null;
-            if (mapChanged)
+            // Only include viewRadius when map changes and auto-zoom is enabled
+            int? viewRadius = null;
+            if (mapChanged && Properties.Settings.Default.autoZoomOnLocationUpdate)
             {
-                zoomLevel = Properties.Settings.Default.zoomLevelOnLocationUpdate;
-                if (zoomLevel < 0) zoomLevel = 0;
-                if (zoomLevel > 20) zoomLevel = 20;
+                viewRadius = Properties.Settings.Default.viewRadiusOnLocationUpdate;
+                if (viewRadius < 10) viewRadius = 10;
+                if (viewRadius > 5000) viewRadius = 5000;
             }
 
-            var message = GetPlayerPositionMessage(e, zoomLevel);
+            var message = GetPlayerPositionMessage(e, viewRadius);
 
             try
             {
@@ -247,7 +247,7 @@ namespace TarkovMonitor
             }
         }
 
-        public static JsonObject GetPlayerPositionMessage(PlayerPositionEventArgs e, int? zoomLevel = null)
+        public static JsonObject GetPlayerPositionMessage(PlayerPositionEventArgs e, int? viewRadius = null)
         {
             var map = TarkovDev.Maps.Find(m => m.nameId == e.RaidInfo.Map)?.normalizedName;
             if (map == null && e.RaidInfo.Map != null)
@@ -267,10 +267,10 @@ namespace TarkovMonitor
                 ["rotation"] = e.Rotation,
             };
 
-            // Include zoom level if provided
-            if (zoomLevel.HasValue)
+            // Include view radius (meters) if provided — only sent on map change
+            if (viewRadius.HasValue)
             {
-                data["zoomLevel"] = zoomLevel.Value;
+                data["viewRadius"] = viewRadius.Value;
             }
 
             return new JsonObject
