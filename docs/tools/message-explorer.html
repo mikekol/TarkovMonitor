@@ -98,12 +98,22 @@
   .detail-body { flex: 1; overflow-y: auto; padding: 10px 12px; font-family: monospace; font-size: 12px; line-height: 1.6; }
   .detail-empty { display: flex; align-items: center; justify-content: center; flex: 1; color: var(--muted); font-size: 12px; font-style: italic; }
 
-  /* JSON syntax */
+  /* JSON tree */
+  .jt-node { display: block; }
+  .jt-toggle { cursor: pointer; user-select: none; display: inline-flex; align-items: center; }
+  .jt-toggle::before { content: '▾'; display: inline-block; width: 14px; font-size: 10px; color: var(--muted); transition: transform .12s; }
+  .jt-toggle.collapsed::before { transform: rotate(-90deg); }
+  .jt-children { padding-left: 18px; border-left: 1px solid var(--border); margin-left: 4px; }
+  .jt-children.hidden { display: none; }
+  .jt-summary { color: var(--muted); font-size: 11px; }
   .jk { color: var(--json-key); }
   .js { color: var(--json-str); }
   .jn { color: var(--json-num); }
   .jb { color: var(--json-bool); }
   .jz { color: var(--json-null); }
+  .jt-brace { color: var(--muted); }
+  .btn-tree-ctrl { background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: 10px; padding: 1px 6px; border-radius: 3px; }
+  .btn-tree-ctrl:hover { color: var(--text); border-color: var(--text); opacity: 1; }
 
   /* Scrollbar */
   ::-webkit-scrollbar { width: 6px; }
@@ -181,6 +191,8 @@
     <div class="detail-header">
       <h3 id="detailTitle">No message selected</h3>
       <div class="detail-actions">
+        <button class="btn-tree-ctrl" onclick="treeExpandAll()">Expand all</button>
+        <button class="btn-tree-ctrl" onclick="treeCollapseAll()">Collapse all</button>
         <button class="btn-copy" onclick="copyDetail()">Copy</button>
       </div>
     </div>
@@ -360,9 +372,9 @@ function showDetail(m) {
   empty.style.display = 'none';
   body.style.display = 'block';
 
-  // Pretty-print the raw JSON (excluding internal _ fields)
   const clean = Object.fromEntries(Object.entries(m).filter(([k]) => !k.startsWith('_')));
-  body.innerHTML = syntaxHighlight(JSON.stringify(clean, null, 2));
+  body.innerHTML = '';
+  body.appendChild(buildTree(clean));
 }
 
 function copyDetail() {
@@ -415,16 +427,83 @@ function preview(m) {
 
 function fmt(n) { return n !== undefined ? Number(n).toFixed(1) : '?'; }
 
-function syntaxHighlight(json) {
-  return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, match => {
-    if (/^"/.test(match)) {
-      if (/:$/.test(match)) return `<span class="jk">${match}</span>`;
-      return `<span class="js">${match}</span>`;
-    }
-    if (/true|false/.test(match)) return `<span class="jb">${match}</span>`;
-    if (/null/.test(match)) return `<span class="jz">${match}</span>`;
-    return `<span class="jn">${match}</span>`;
+// ── JSON tree renderer ───────────────────────────────────────
+function buildTree(value, key) {
+  const wrap = document.createElement('div');
+  wrap.className = 'jt-node';
+
+  const isObj   = value !== null && typeof value === 'object' && !Array.isArray(value);
+  const isArr   = Array.isArray(value);
+  const isLeaf  = !isObj && !isArr;
+
+  // Key prefix (when inside an object)
+  const keySpan = key !== undefined
+    ? Object.assign(document.createElement('span'), { className: 'jk', textContent: `"${key}": ` })
+    : null;
+
+  if (isLeaf) {
+    if (keySpan) wrap.appendChild(keySpan);
+    wrap.appendChild(leafSpan(value));
+    return wrap;
+  }
+
+  // Collapsible container
+  const entries = isObj ? Object.entries(value) : value.map((v, i) => [i, v]);
+  const open  = isObj ? '{' : '[';
+  const close = isObj ? '}' : ']';
+  const count = entries.length;
+
+  const toggle = document.createElement('span');
+  toggle.className = 'jt-toggle';
+
+  if (keySpan) toggle.appendChild(keySpan);
+  toggle.appendChild(Object.assign(document.createElement('span'), { className: 'jt-brace', textContent: open }));
+
+  const summary = Object.assign(document.createElement('span'), {
+    className: 'jt-summary',
+    textContent: ` ${count} ${isObj ? 'key' : 'item'}${count !== 1 ? 's' : ''} `,
   });
+  toggle.appendChild(summary);
+
+  const children = document.createElement('div');
+  children.className = 'jt-children';
+  for (const [k, v] of entries) {
+    children.appendChild(buildTree(v, isObj ? k : undefined));
+  }
+
+  const closeSpan = Object.assign(document.createElement('span'), { className: 'jt-brace', textContent: close });
+
+  toggle.onclick = () => {
+    const collapsed = toggle.classList.toggle('collapsed');
+    children.classList.toggle('hidden', collapsed);
+    summary.style.display = collapsed ? 'inline' : 'none';
+    closeSpan.style.display = collapsed ? 'none' : 'inline';
+  };
+  summary.style.display = 'none'; // starts expanded
+
+  wrap.appendChild(toggle);
+  wrap.appendChild(children);
+  wrap.appendChild(closeSpan);
+  return wrap;
+}
+
+function leafSpan(value) {
+  const s = document.createElement('span');
+  if (value === null)            { s.className = 'jz'; s.textContent = 'null'; }
+  else if (typeof value === 'boolean') { s.className = 'jb'; s.textContent = String(value); }
+  else if (typeof value === 'number')  { s.className = 'jn'; s.textContent = String(value); }
+  else                                 { s.className = 'js'; s.textContent = `"${String(value).replace(/\\/g,'\\\\').replace(/"/g,'\\"')}"`;  }
+  return s;
+}
+
+function treeExpandAll() {
+  const body = document.getElementById('detailBody');
+  body.querySelectorAll('.jt-toggle.collapsed').forEach(t => t.click());
+}
+
+function treeCollapseAll() {
+  const body = document.getElementById('detailBody');
+  body.querySelectorAll('.jt-toggle:not(.collapsed)').forEach(t => t.click());
 }
 
 // ── Suffix selector ──────────────────────────────────────────
