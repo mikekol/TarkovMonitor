@@ -1,0 +1,5 @@
+textual>=3.0.0
+grpcio>=1.70.0
+grpcio-tools>=1.70.0
+httpx>=0.28.0
+watchfiles>=1.0.0

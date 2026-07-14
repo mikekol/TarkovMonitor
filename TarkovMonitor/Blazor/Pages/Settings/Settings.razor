@@ -124,6 +124,12 @@
         <MudPaper Class="pa-2 ma-2 mx-4" Elevation="3">
             <MudText Typo="Typo.h6" Class="d-flex align-center"><MudIcon Icon="@Icons.Material.Filled.SettingsRemote" Class="mr-2" /><MudButton @onclick="VisitWebsite" Variant="Variant.Text">@LocalizationService.GetString("TarkovDevWebsiteRemote")</MudButton></MudText>
             <MudTextField @bind-Value="@remoteIdInput" Label="Remote Browser IDs (comma-separated for multiple)" Placeholder="e.g., abc123,def456" Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Enter one or more remote IDs from tarkov.dev, separated by commas or semicolons"></MudTextField>
+            <div>
+                <MudSwitch @bind-Value="@NavigateMapSwitch" Label="@LocalizationService.GetString("SwitchToTarkovDevMapOnRaidLoad")" Color="Color.Info" />
+            </div>
+            <div>
+                <MudSwitch @bind-Value="@NavigateMapOnPositionUpdateSwitch" Label="@LocalizationService.GetString("SwitchToTarkovDevMapOnPositionUpdate")" Color="Color.Info" />
+            </div>
             <div style="margin-top: 8px;">
                 <MudSwitch @bind-Value="@autoZoomInput" Label="Zoom to player on screenshot" Color="Color.Info" />
                 <MudNumericField @bind-Value="@viewRadiusInput"
@@ -135,12 +141,6 @@
                                  Adornment="Adornment.End" AdornmentText="m"
                                  HelperText="Meters shown around your position on each new map (50 = very close, 1000 = wide area)"
                                  Style="max-width: 200px; margin-top: 4px;" />
-            </div>
-            <div>
-                <MudSwitch @bind-Value="@NavigateMapSwitch" Label="@LocalizationService.GetString("SwitchToTarkovDevMapOnRaidLoad")" Color="Color.Info" />
-            </div>
-            <div>
-                <MudSwitch @bind-Value="@NavigateMapOnPositionUpdateSwitch" Label="@LocalizationService.GetString("SwitchToTarkovDevMapOnPositionUpdate")" Color="Color.Info" />
             </div>
             <div>
                 <MudSwitch @bind-Value="@AutomaticallyDeleteScreenshotsAfterRaid" Label="@LocalizationService.GetString("AutomaticallyDeleteScreenshotsAfterRaid")" Color="Color.Info" />
