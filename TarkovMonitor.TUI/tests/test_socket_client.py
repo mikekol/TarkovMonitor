@@ -97,6 +97,7 @@ async def test_send_failure_clears_connection_and_does_not_raise():
         pos = PlayerPosition(x=0.0, y=0.0, z=0.0, rotation=0.0, filename="f.png", map_name="")
         # must not raise
         await client.send_player_position(pos, "woods")
+        assert "r1" not in client._connections
         await client.close()
 
 
