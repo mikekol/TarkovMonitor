@@ -252,9 +252,11 @@ class TarkovDevClient:
                 wiki_link=t.get("wikiLink", ""),
                 restartable=bool(t.get("restartable", False)),
                 fail_if_complete=[
-                    c["task"]["id"]
+                    c["task"]
                     for c in t.get("failConditions", [])
-                    if "complete" in c.get("status", []) and c.get("task", {}).get("id")
+                    if isinstance(c, dict)
+                    and "complete" in c.get("status", [])
+                    and isinstance(c.get("task"), str)
                 ],
             )
             for t in items
@@ -266,7 +268,9 @@ class TarkovDevClient:
         raw = resp.json()
         data = raw.get("data", raw)
         if isinstance(data, dict) and "traders" in data:
-            traders_raw = data["traders"]
+            traders_raw = list(data["traders"].values()) if isinstance(data["traders"], dict) else data["traders"]
+        elif isinstance(data, dict):
+            traders_raw = list(data.values())
         elif isinstance(data, list):
             traders_raw = data
         else:
@@ -293,7 +297,9 @@ class TarkovDevClient:
         raw = resp.json()
         data = raw.get("data", raw)
         if isinstance(data, dict) and "stations" in data:
-            stations_raw = data["stations"]
+            stations_raw = list(data["stations"].values()) if isinstance(data["stations"], dict) else data["stations"]
+        elif isinstance(data, dict):
+            stations_raw = list(data.values())
         elif isinstance(data, list):
             stations_raw = data
         else:

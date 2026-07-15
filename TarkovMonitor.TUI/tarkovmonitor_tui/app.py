@@ -325,7 +325,9 @@ class TarkovMonitorApp(App):
             self._log_message(
                 f"tarkov.dev: {len(self._tarkov_dev.maps)} maps, "
                 f"{len(self._tarkov_dev.items)} items, "
-                f"{len(self._tarkov_dev.tasks)} tasks",
+                f"{len(self._tarkov_dev.tasks)} tasks, "
+                f"{len(self._tarkov_dev.traders)} traders, "
+                f"{len(self._tarkov_dev.hideout_stations)} hideout stations",
                 "info",
             )
 

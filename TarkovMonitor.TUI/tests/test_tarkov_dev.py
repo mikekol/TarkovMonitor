@@ -139,8 +139,8 @@ async def test_fetch_tasks_parses_fail_if_complete(httpx_mock):
         url="https://json.tarkov.dev/regular/tasks",
         json={
             "data": {
-                "tasks": [
-                    {
+                "tasks": {
+                    "task-a": {
                         "id": "task-a",
                         "name": "Task A",
                         "normalizedName": "task-a",
@@ -148,7 +148,7 @@ async def test_fetch_tasks_parses_fail_if_complete(httpx_mock):
                         "restartable": True,
                         "failConditions": [],
                     },
-                    {
+                    "task-b": {
                         "id": "task-b",
                         "name": "Task B",
                         "normalizedName": "task-b",
@@ -156,12 +156,13 @@ async def test_fetch_tasks_parses_fail_if_complete(httpx_mock):
                         "restartable": False,
                         "failConditions": [
                             {
-                                "task": {"id": "task-a"},
+                                "type": "taskStatus",
+                                "task": "task-a",
                                 "status": ["complete"],
                             }
                         ],
                     },
-                ]
+                }
             }
         },
     )
@@ -183,6 +184,39 @@ async def test_fetch_tasks_parses_fail_if_complete(httpx_mock):
     assert task_b.fail_if_complete == ["task-a"]
 
 
+async def test_fetch_tasks_null_task_in_fail_conditions(httpx_mock):
+    """failConditions with "task": null must not crash the parser."""
+    httpx_mock.add_response(
+        url="https://json.tarkov.dev/regular/tasks",
+        json={
+            "data": {
+                "tasks": {
+                    "task-x": {
+                        "id": "task-x",
+                        "name": "Task X",
+                        "normalizedName": "task-x",
+                        "wikiLink": "",
+                        "restartable": False,
+                        "failConditions": [
+                            {"type": "taskStatus", "task": None, "status": ["complete"]},
+                        ],
+                    },
+                }
+            }
+        },
+    )
+    httpx_mock.add_response(
+        url="https://json.tarkov.dev/regular/tasks_en",
+        json={},
+    )
+    client = TarkovDevClient()
+    await client._fetch_tasks()
+    await client.close()
+
+    assert len(client.tasks) == 1
+    assert client.tasks[0].fail_if_complete == []
+
+
 # --- _fetch_traders ---
 
 async def test_fetch_traders_parses_fence_reputation_levels(httpx_mock):
@@ -190,18 +224,16 @@ async def test_fetch_traders_parses_fence_reputation_levels(httpx_mock):
         url="https://json.tarkov.dev/regular/traders",
         json={
             "data": {
-                "traders": [
-                    {
-                        "id": "fence-id",
-                        "name": "Fence",
-                        "normalizedName": "fence",
-                        "reputationLevels": [
-                            {"minimumReputation": -7.0, "scavCooldownModifier": 1.5},
-                            {"minimumReputation": -0.02, "scavCooldownModifier": 1.0},
-                            {"minimumReputation": 6.0, "scavCooldownModifier": 0.5},
-                        ],
-                    }
-                ]
+                "fence-id": {
+                    "id": "fence-id",
+                    "name": "Fence",
+                    "normalizedName": "fence",
+                    "reputationLevels": [
+                        {"minimumReputation": -7.0, "scavCooldownModifier": 1.5},
+                        {"minimumReputation": -0.02, "scavCooldownModifier": 1.0},
+                        {"minimumReputation": 6.0, "scavCooldownModifier": 0.5},
+                    ],
+                }
             }
         },
     )
@@ -225,10 +257,8 @@ async def test_get_fence_finds_fence_trader(httpx_mock):
         url="https://json.tarkov.dev/regular/traders",
         json={
             "data": {
-                "traders": [
-                    {"id": "1", "name": "Prapor", "normalizedName": "prapor", "reputationLevels": []},
-                    {"id": "2", "name": "Fence", "normalizedName": "fence", "reputationLevels": []},
-                ]
+                "1": {"id": "1", "name": "Prapor", "normalizedName": "prapor", "reputationLevels": []},
+                "2": {"id": "2", "name": "Fence", "normalizedName": "fence", "reputationLevels": []},
             }
         },
     )
@@ -254,29 +284,27 @@ async def test_fetch_hideout_parses_stations_and_bonuses(httpx_mock):
         url="https://json.tarkov.dev/regular/hideout",
         json={
             "data": {
-                "stations": [
-                    {
-                        "id": "station-1",
-                        "name": "Air Filtering Unit",
-                        "normalizedName": "air-filtering-unit",
-                        "levels": [
-                            {
-                                "id": "level-1",
-                                "level": 1,
-                                "bonuses": [
-                                    {"type": "ScavCooldownTimer", "value": -0.05}
-                                ],
-                            },
-                            {
-                                "id": "level-2",
-                                "level": 2,
-                                "bonuses": [
-                                    {"type": "ScavCooldownTimer", "value": -0.1}
-                                ],
-                            },
-                        ],
-                    }
-                ]
+                "station-1": {
+                    "id": "station-1",
+                    "name": "Air Filtering Unit",
+                    "normalizedName": "air-filtering-unit",
+                    "levels": [
+                        {
+                            "id": "level-1",
+                            "level": 1,
+                            "bonuses": [
+                                {"type": "ScavCooldownTimer", "value": -0.05}
+                            ],
+                        },
+                        {
+                            "id": "level-2",
+                            "level": 2,
+                            "bonuses": [
+                                {"type": "ScavCooldownTimer", "value": -0.1}
+                            ],
+                        },
+                    ],
+                }
             }
         },
     )
