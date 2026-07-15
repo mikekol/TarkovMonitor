@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 import os
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -31,6 +32,7 @@ from textual.widgets import (
     TabPane,
 )
 
+from .cooldown import calculate_scav_cooldown
 from .grpc_client import GameEventClient, RaidType
 from .screenshots import get_screenshots_path, parse_screenshot
 from .sounds import SOUND_EVENTS, SOUND_LABELS, SoundManager
@@ -178,6 +180,7 @@ class TarkovMonitorApp(App):
         self._settings = load_settings()
         self._current_raid_map = ""
         self._profile_id = ""
+        self._scav_available_at: float | None = None
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -229,6 +232,14 @@ class TarkovMonitorApp(App):
                             classes="setting-input",
                         )
                     with Horizontal(classes="setting-row"):
+                        yield Label("Fence Karma:", classes="setting-label")
+                        yield Input(
+                            value=str(self._settings.get("scav_karma", "0.0")),
+                            placeholder="Your Fence reputation (e.g. 0.45)",
+                            id="input-scav-karma",
+                            classes="setting-input",
+                        )
+                    with Horizontal(classes="setting-row"):
                         yield Label("Screenshots Path:", classes="setting-label")
                         yield Input(
                             value=self._settings.get("screenshots_path", str(get_screenshots_path())),
@@ -261,6 +272,7 @@ class TarkovMonitorApp(App):
         self._update_status_bar()
         self.connect_to_service()
         self.fetch_tarkov_dev_data()
+        self.set_interval(1.0, self._tick_scav_timer)
 
     @work(exclusive=True, group="grpc")
     async def connect_to_service(self) -> None:
@@ -314,6 +326,7 @@ class TarkovMonitorApp(App):
         self._log_message("Raid starting...", "raid")
 
     def _on_raid_started(self, event_type: str, data: dict) -> None:
+        self._tarkov_dev.record_activity()
         info = GameEventClient.parse_raid_info(data)
         self.in_raid = True
         self._current_raid_map = info.map
@@ -333,12 +346,16 @@ class TarkovMonitorApp(App):
         map_name = self._resolve_map_name(info.map)
         self._log_message(f"Ended {map_name} raid", "raid")
         self._update_raid_info(None)
+        self._tarkov_dev.record_activity()
+        self._start_scav_countdown()
 
     def _on_raid_exited(self, event_type: str, data: dict) -> None:
         self.in_raid = False
         map_name = self._resolve_map_name(data.get("map", ""))
         self._log_message(f"Exited {map_name} raid", "raid")
         self._update_raid_info(None)
+        self._tarkov_dev.record_activity()
+        self._start_scav_countdown()
 
     def _on_match_found(self, event_type: str, data: dict) -> None:
         info = GameEventClient.parse_raid_info(data)
@@ -350,6 +367,7 @@ class TarkovMonitorApp(App):
         )
 
     def _on_map_loading(self, event_type: str, data: dict) -> None:
+        self._tarkov_dev.record_activity()
         info = GameEventClient.parse_raid_info(data)
         map_name = self._resolve_map_name(info.map)
         self._log_message(f"Loading map: {map_name}", "raid")
@@ -455,9 +473,16 @@ class TarkovMonitorApp(App):
             return
         status = self.connection_status
         if status == "Connected":
-            bar.update(f" [green]●[/green] Connected to {self._server_address}")
+            text = f" [green]●[/green] Connected to {self._server_address}"
         else:
-            bar.update(f" [red]●[/red] Disconnected")
+            text = f" [red]●[/red] Disconnected"
+
+        if self._scav_available_at is not None:
+            remaining = max(0, self._scav_available_at - time.monotonic())
+            mins, secs = divmod(int(remaining), 60)
+            text += f" | [cyan]Scav: {mins}:{secs:02d}[/cyan]"
+
+        bar.update(text)
 
     def _update_raid_info(self, info) -> None:
         try:
@@ -473,6 +498,36 @@ class TarkovMonitorApp(App):
             )
         else:
             bar.update(" [dim]Not in raid[/dim]")
+
+    def _start_scav_countdown(self) -> None:
+        fence = self._tarkov_dev.get_fence()
+        if not fence:
+            return
+        try:
+            karma = float(self._settings.get("scav_karma", "0.0"))
+        except ValueError:
+            karma = 0.0
+        seconds = calculate_scav_cooldown(
+            base_seconds=self._tarkov_dev.scav_cooldown_base_seconds,
+            fence_rep_levels=fence.reputation_levels,
+            karma=karma,
+            hideout_stations=self._tarkov_dev.hideout_stations,
+            built_level_ids=set(),  # no TarkovTracker integration yet
+        )
+        self._scav_available_at = time.monotonic() + seconds
+        mins, secs = divmod(seconds, 60)
+        self._log_message(f"Scav cooldown started: {mins}:{secs:02d}", "info")
+        self._update_status_bar()
+
+    def _tick_scav_timer(self) -> None:
+        if self._scav_available_at is None:
+            return
+        remaining = self._scav_available_at - time.monotonic()
+        if remaining <= 0:
+            self._scav_available_at = None
+            self._sound_mgr.play("scav_available")
+            self._log_message("Scav available!", "info")
+        self._update_status_bar()
 
     async def _push_config(self) -> None:
         try:
@@ -491,6 +546,7 @@ class TarkovMonitorApp(App):
         self._settings["custom_map"] = self.query_one("#input-custom-map", Input).value
         self._settings["tarkov_tracker_token"] = self.query_one("#input-tt-token", Input).value
         self._settings["tarkov_tracker_domain"] = self.query_one("#input-tt-domain", Input).value
+        self._settings["scav_karma"] = self.query_one("#input-scav-karma", Input).value
         self._settings["screenshots_path"] = self.query_one("#input-screenshots-path", Input).value
         save_settings(self._settings)
         self._log_message("Settings saved", "system")
