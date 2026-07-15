@@ -34,6 +34,7 @@ from textual.widgets import (
 
 from .cooldown import calculate_scav_cooldown
 from .grpc_client import GameEventClient, RaidType
+from .manager_api import ManagerApiClient
 from .screenshots import get_screenshots_path, parse_screenshot
 from .sounds import SOUND_EVENTS, SOUND_LABELS, SoundManager
 from .tarkov_dev import TarkovDevClient
@@ -158,6 +159,14 @@ class TarkovMonitorApp(App):
         padding: 0 1;
         border-top: solid $primary;
     }
+    #btn-report-goons {
+        display: none;
+        dock: bottom;
+        margin: 0 1;
+    }
+    #btn-report-goons.active {
+        display: block;
+    }
     """
 
     BINDINGS = [
@@ -177,6 +186,7 @@ class TarkovMonitorApp(App):
         self._client = GameEventClient(server_address)
         self._tarkov_dev = TarkovDevClient()
         self._sound_mgr = SoundManager()
+        self._manager_api = ManagerApiClient()
         self._settings = load_settings()
         self._current_raid_map = ""
         self._profile_id = ""
@@ -189,6 +199,7 @@ class TarkovMonitorApp(App):
         with TabbedContent():
             with TabPane("Dashboard", id="dashboard"):
                 yield RichLog(id="event-log", highlight=True, markup=True, wrap=True)
+                yield Button("Report Goons Sighting", id="btn-report-goons", variant="warning")
                 yield Static("", id="raid-info")
             with TabPane("Settings", id="settings"):
                 with VerticalScroll(id="settings-form"):
@@ -245,6 +256,12 @@ class TarkovMonitorApp(App):
                         yield Checkbox(
                             value=bool(self._settings.get("air_filter_installed", False)),
                             id="check-air-filter",
+                        )
+                    with Horizontal(classes="setting-row"):
+                        yield Label("Submit queue times:", classes="setting-label")
+                        yield Checkbox(
+                            value=bool(self._settings.get("submit_queue_time", False)),
+                            id="check-submit-queue",
                         )
                     with Horizontal(classes="setting-row"):
                         yield Label("Screenshots Path:", classes="setting-label")
@@ -378,6 +395,11 @@ class TarkovMonitorApp(App):
             f"Match found on {map_name} after {info.queue_time:.0f}s",
             "match",
         )
+        if self._settings.get("submit_queue_time") and info.map:
+            raid_type = info.raid_type.value.lower() if info.raid_type else "pmc"
+            asyncio.create_task(
+                self._manager_api.post_queue_time(info.map, info.queue_time, raid_type)
+            )
 
     def _on_map_loading(self, event_type: str, data: dict) -> None:
         self._tarkov_dev.record_activity()
@@ -532,6 +554,16 @@ class TarkovMonitorApp(App):
         else:
             bar.update(" [dim]Not in raid[/dim]")
 
+        try:
+            btn = self.query_one("#btn-report-goons", Button)
+            current_map = self._tarkov_dev.find_map(self._current_raid_map)
+            if current_map and current_map.has_goons:
+                btn.add_class("active")
+            else:
+                btn.remove_class("active")
+        except NoMatches:
+            pass
+
     def _start_scav_countdown(self) -> None:
         fence = self._tarkov_dev.get_fence()
         if not fence:
@@ -582,6 +614,7 @@ class TarkovMonitorApp(App):
         self._settings["scav_karma"] = self.query_one("#input-scav-karma", Input).value
         self._settings["screenshots_path"] = self.query_one("#input-screenshots-path", Input).value
         self._settings["air_filter_installed"] = self.query_one("#check-air-filter", Checkbox).value
+        self._settings["submit_queue_time"] = self.query_one("#check-submit-queue", Checkbox).value
         save_settings(self._settings)
         self._log_message("Settings saved", "system")
 
@@ -622,6 +655,11 @@ class TarkovMonitorApp(App):
     @on(Button.Pressed)
     def on_button_pressed(self, event: Button.Pressed) -> None:
         btn_id = event.button.id or ""
+        if btn_id == "btn-report-goons":
+            if self._current_raid_map:
+                asyncio.create_task(self._manager_api.post_goons_sighting(self._current_raid_map))
+                self._log_message(f"Goons sighting reported for {self._resolve_map_name(self._current_raid_map)}", "info")
+            return
         if btn_id.startswith("test-"):
             key = btn_id[5:]
             self._sound_mgr.play(key)
@@ -633,6 +671,7 @@ class TarkovMonitorApp(App):
     async def action_quit(self) -> None:
         await self._client.disconnect()
         await self._tarkov_dev.close()
+        await self._manager_api.close()
         self.exit()
 
 
