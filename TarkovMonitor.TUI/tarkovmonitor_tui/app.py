@@ -35,7 +35,8 @@ from textual.widgets import (
 from .cooldown import calculate_scav_cooldown
 from .grpc_client import GameEventClient, RaidType
 from .manager_api import ManagerApiClient
-from .screenshots import get_screenshots_path, parse_screenshot
+from .screenshots import ScreenshotWatcher, get_screenshots_path, parse_screenshot
+from .socket_client import TarkovSocketClient
 from .sounds import SOUND_EVENTS, SOUND_LABELS, SoundManager
 from .tarkov_dev import TarkovDevClient
 from .tarkov_tracker import TarkovTrackerClient
@@ -194,6 +195,9 @@ class TarkovMonitorApp(App):
         self._profile_id = ""
         self._scav_available_at: float | None = None
         self._failed_task_ids: set[str] = set()
+        self._screenshot_watcher: ScreenshotWatcher | None = None
+        self._socket_client: TarkovSocketClient | None = None
+        self._last_sent_map: str = ""
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -272,6 +276,34 @@ class TarkovMonitorApp(App):
                             id="input-screenshots-path",
                             classes="setting-input",
                         )
+                    with Horizontal(classes="setting-row"):
+                        yield Label("Remote IDs:", classes="setting-label")
+                        yield Input(
+                            value=self._settings.get("remote_ids", ""),
+                            placeholder="Comma-separated tarkov.dev remote IDs",
+                            id="input-remote-ids",
+                            classes="setting-input",
+                        )
+                    with Horizontal(classes="setting-row"):
+                        yield Label("Auto-zoom on map change:", classes="setting-label")
+                        yield Checkbox(
+                            value=bool(self._settings.get("auto_zoom", False)),
+                            id="check-auto-zoom",
+                        )
+                    with Horizontal(classes="setting-row"):
+                        yield Label("View radius (m):", classes="setting-label")
+                        yield Input(
+                            value=str(self._settings.get("view_radius", 500)),
+                            placeholder="50–5000",
+                            id="input-view-radius",
+                            classes="setting-input",
+                        )
+                    with Horizontal(classes="setting-row"):
+                        yield Label("Navigate map on position:", classes="setting-label")
+                        yield Checkbox(
+                            value=bool(self._settings.get("navigate_map_on_position", False)),
+                            id="check-navigate-map",
+                        )
                     yield Button("Save & Push to Service", id="btn-save-settings", variant="primary")
                     yield Button("Reconnect", id="btn-reconnect", variant="default")
             with TabPane("Sounds", id="sounds"):
@@ -300,6 +332,8 @@ class TarkovMonitorApp(App):
         self.fetch_tarkov_dev_data()
         self.set_interval(1.0, self._tick_scav_timer)
         self.refresh_tarkov_dev_periodically()
+        self._restart_screenshot_watcher()
+        self._restart_socket_client()
 
     @work(exclusive=True, group="grpc")
     async def connect_to_service(self) -> None:
@@ -644,6 +678,63 @@ class TarkovMonitorApp(App):
         except Exception as e:
             self._log_message(f"Failed to push config: {e}", "error")
 
+    def _restart_screenshot_watcher(self) -> None:
+        if self._screenshot_watcher is not None:
+            self._screenshot_watcher.stop()
+            self._screenshot_watcher = None
+        path_str = self._settings.get("screenshots_path", str(get_screenshots_path()))
+        path = Path(path_str)
+        if path.exists():
+            self._screenshot_watcher = ScreenshotWatcher(path, self._on_new_screenshot)
+            self._screenshot_watcher.start()
+        else:
+            log.debug("Screenshots path does not exist, watcher not started: %s", path)
+
+    def _restart_socket_client(self) -> None:
+        if self._socket_client is not None:
+            asyncio.create_task(self._socket_client.close())
+            self._socket_client = None
+        raw = self._settings.get("remote_ids", "")
+        ids = [r.strip() for r in raw.replace(";", ",").split(",") if r.strip()]
+        if ids:
+            self._socket_client = TarkovSocketClient(ids)
+
+    def _on_new_screenshot(self, filename: str) -> None:
+        self._tarkov_dev.record_activity()
+        map_name_id = self._current_raid_map or self._settings.get("custom_map", "")
+        pos = parse_screenshot(filename, current_map=map_name_id)
+        if pos is None:
+            return
+
+        tarkov_map = self._tarkov_dev.find_map(map_name_id)
+        normalized = tarkov_map.normalized_name if tarkov_map else map_name_id
+        display = tarkov_map.name if tarkov_map else (map_name_id or "Unknown")
+
+        self._log_message(
+            f"Position on {display}: ({pos.x:.1f}, {pos.y:.1f}, {pos.z:.1f})",
+            "position",
+        )
+
+        if self._socket_client is None:
+            return
+
+        view_radius: int | None = None
+        if self._settings.get("auto_zoom") and normalized != self._last_sent_map:
+            try:
+                view_radius = max(50, min(5000, int(self._settings.get("view_radius", 500))))
+            except (ValueError, TypeError):
+                view_radius = 500
+
+        async def _relay() -> None:
+            await self._socket_client.send_player_position(pos, normalized, view_radius)
+            if self._settings.get("navigate_map_on_position"):
+                await self._socket_client.navigate_to_map(normalized)
+
+        asyncio.create_task(_relay())
+        self._last_sent_map = normalized
+        n = len(self._socket_client._remote_ids)
+        self._log_message(f"  → relayed to {n} remote(s)", "position")
+
     @on(Button.Pressed, "#btn-save-settings")
     async def save_settings(self) -> None:
         self._settings["server_address"] = self.query_one("#input-server", Input).value
@@ -655,8 +746,17 @@ class TarkovMonitorApp(App):
         self._settings["screenshots_path"] = self.query_one("#input-screenshots-path", Input).value
         self._settings["air_filter_installed"] = self.query_one("#check-air-filter", Checkbox).value
         self._settings["submit_queue_time"] = self.query_one("#check-submit-queue", Checkbox).value
+        self._settings["remote_ids"] = self.query_one("#input-remote-ids", Input).value
+        self._settings["auto_zoom"] = self.query_one("#check-auto-zoom", Checkbox).value
+        self._settings["navigate_map_on_position"] = self.query_one("#check-navigate-map", Checkbox).value
+        try:
+            self._settings["view_radius"] = max(50, min(5000, int(self.query_one("#input-view-radius", Input).value)))
+        except (ValueError, TypeError):
+            self._settings["view_radius"] = 500
         save_settings(self._settings)
         self._log_message("Settings saved", "system")
+        self._restart_screenshot_watcher()
+        self._restart_socket_client()
 
         try:
             tokens = {}
