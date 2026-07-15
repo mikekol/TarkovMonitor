@@ -38,6 +38,7 @@ from .manager_api import ManagerApiClient
 from .screenshots import get_screenshots_path, parse_screenshot
 from .sounds import SOUND_EVENTS, SOUND_LABELS, SoundManager
 from .tarkov_dev import TarkovDevClient
+from .tarkov_tracker import TarkovTrackerClient
 
 log = logging.getLogger(__name__)
 
@@ -187,6 +188,7 @@ class TarkovMonitorApp(App):
         self._tarkov_dev = TarkovDevClient()
         self._sound_mgr = SoundManager()
         self._manager_api = ManagerApiClient()
+        self._tt_client = TarkovTrackerClient()
         self._settings = load_settings()
         self._current_raid_map = ""
         self._profile_id = ""
@@ -297,6 +299,7 @@ class TarkovMonitorApp(App):
         self.connect_to_service()
         self.fetch_tarkov_dev_data()
         self.set_interval(1.0, self._tick_scav_timer)
+        self.refresh_tarkov_dev_periodically()
 
     @work(exclusive=True, group="grpc")
     async def connect_to_service(self) -> None:
@@ -325,6 +328,12 @@ class TarkovMonitorApp(App):
                 f"{len(self._tarkov_dev.tasks)} tasks",
                 "info",
             )
+
+    @work(exclusive=True, group="tarkov_dev_refresh")
+    async def refresh_tarkov_dev_periodically(self) -> None:
+        while True:
+            await asyncio.sleep(60)
+            await self._tarkov_dev.maybe_refresh()
 
     def _wire_events(self) -> None:
         self._client.on("RaidStarting", self._on_raid_starting)
@@ -478,16 +487,43 @@ class TarkovMonitorApp(App):
         self._profile_id = data.get("profileId", "")
         ptype = data.get("profileType", "Regular")
         self._log_message(f"Using {ptype} profile", "profile")
+        game_mode = "pve" if ptype == "PVE" else "regular"
+        self._tarkov_dev.record_activity()
+        if game_mode != self._tarkov_dev._game_mode:
+            self._tarkov_dev._game_mode = game_mode
+            self.fetch_tarkov_dev_data()
 
     def _on_initial_read(self, event_type: str, data: dict) -> None:
         self._profile_id = data.get("profileId", "")
         ptype = data.get("profileType", "Regular")
         self._log_message(f"Initial read complete — {ptype} profile", "profile")
+        game_mode = "pve" if ptype == "PVE" else "regular"
+        self._tarkov_dev.record_activity()
+        if game_mode != self._tarkov_dev._game_mode:
+            self._tarkov_dev._game_mode = game_mode
+            self.fetch_tarkov_dev_data()
+        token = self._settings.get("tarkov_tracker_token", "")
+        domain = self._settings.get("tarkov_tracker_domain", "tarkovtracker.io")
+        if token:
+            asyncio.create_task(self._fetch_tt_profile(token, domain))
 
     def _on_player_position(self, event_type: str, data: dict) -> None:
         x, y, z = data.get("x", "?"), data.get("y", "?"), data.get("z", "?")
         map_name = self._resolve_map_name(data.get("map", ""))
         self._log_message(f"Position on {map_name}: ({x}, {y}, {z})", "position")
+
+    async def _fetch_tt_profile(self, token: str, domain: str) -> None:
+        progress = await self._tt_client.fetch_progress(token=token, domain=domain)
+        if not progress:
+            self._log_message("TarkovTracker: could not fetch progress (check token/domain)", "error")
+            return
+        name = progress.get("displayName", "Unknown")
+        level = progress.get("playerLevel", "?")
+        faction = progress.get("pmcFaction", "?")
+        self._log_message(
+            f"TarkovTracker: {name} | Level {level} | {faction}",
+            "profile",
+        )
 
     def _resolve_map_name(self, name_id: str) -> str:
         m = self._tarkov_dev.find_map(name_id)
@@ -672,6 +708,7 @@ class TarkovMonitorApp(App):
         await self._client.disconnect()
         await self._tarkov_dev.close()
         await self._manager_api.close()
+        await self._tt_client.close()
         self.exit()
 
 
