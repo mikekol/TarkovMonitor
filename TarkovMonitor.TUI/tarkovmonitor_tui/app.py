@@ -181,6 +181,7 @@ class TarkovMonitorApp(App):
         self._current_raid_map = ""
         self._profile_id = ""
         self._scav_available_at: float | None = None
+        self._failed_task_ids: set[str] = set()
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -238,6 +239,12 @@ class TarkovMonitorApp(App):
                             placeholder="Your Fence reputation (e.g. 0.45)",
                             id="input-scav-karma",
                             classes="setting-input",
+                        )
+                    with Horizontal(classes="setting-row"):
+                        yield Label("Air filter built:", classes="setting-label")
+                        yield Checkbox(
+                            value=bool(self._settings.get("air_filter_installed", False)),
+                            id="check-air-filter",
                         )
                     with Horizontal(classes="setting-row"):
                         yield Label("Screenshots Path:", classes="setting-label")
@@ -323,6 +330,8 @@ class TarkovMonitorApp(App):
 
     def _on_raid_starting(self, event_type: str, data: dict) -> None:
         self._sound_mgr.play("raid_starting")
+        if self._settings.get("air_filter_installed"):
+            self._sound_mgr.play("air_filter_on")
         self._log_message("Raid starting...", "raid")
 
     def _on_raid_started(self, event_type: str, data: dict) -> None:
@@ -348,6 +357,8 @@ class TarkovMonitorApp(App):
         self._update_raid_info(None)
         self._tarkov_dev.record_activity()
         self._start_scav_countdown()
+        if self._settings.get("air_filter_installed"):
+            self._sound_mgr.play("air_filter_off")
 
     def _on_raid_exited(self, event_type: str, data: dict) -> None:
         self.in_raid = False
@@ -356,6 +367,8 @@ class TarkovMonitorApp(App):
         self._update_raid_info(None)
         self._tarkov_dev.record_activity()
         self._start_scav_countdown()
+        if self._settings.get("air_filter_installed"):
+            self._sound_mgr.play("air_filter_off")
 
     def _on_match_found(self, event_type: str, data: dict) -> None:
         info = GameEventClient.parse_raid_info(data)
@@ -372,16 +385,36 @@ class TarkovMonitorApp(App):
         map_name = self._resolve_map_name(info.map)
         self._log_message(f"Loading map: {map_name}", "raid")
 
+        restartable_failed = [
+            t for t in self._tarkov_dev.tasks
+            if t.id in self._failed_task_ids and t.restartable
+        ]
+        if restartable_failed:
+            self._sound_mgr.play("restart_failed_tasks")
+            for t in restartable_failed:
+                link = f"[link={t.wiki_link}]{t.name}[/link]" if t.wiki_link else t.name
+                self._log_message(f"Reminder: restart failed task — {link}", "quest")
+
     def _on_task_event(self, event_type: str, data: dict) -> None:
         task_id = data.get("taskId", "")
         task = self._tarkov_dev.find_task(task_id)
         task_name = task.name if task else task_id
+
+        if event_type == "TaskFailed":
+            self._failed_task_ids.add(task_id)
+
+        if event_type == "TaskFinished" and task:
+            for other_task in self._tarkov_dev.tasks:
+                if task_id in other_task.fail_if_complete:
+                    self._failed_task_ids.add(other_task.id)
+
         action = {
             "TaskStarted": "Started",
             "TaskFinished": "Completed",
             "TaskFailed": "Failed",
         }.get(event_type, event_type)
-        self._log_message(f"{action} task: {task_name}", "quest")
+        link = f"[link={task.wiki_link}]{task_name}[/link]" if task and task.wiki_link else task_name
+        self._log_message(f"{action} task: {link}", "quest")
 
     def _on_flea_sold(self, event_type: str, data: dict) -> None:
         buyer = data.get("buyer", "Unknown")
@@ -548,6 +581,7 @@ class TarkovMonitorApp(App):
         self._settings["tarkov_tracker_domain"] = self.query_one("#input-tt-domain", Input).value
         self._settings["scav_karma"] = self.query_one("#input-scav-karma", Input).value
         self._settings["screenshots_path"] = self.query_one("#input-screenshots-path", Input).value
+        self._settings["air_filter_installed"] = self.query_one("#check-air-filter", Checkbox).value
         save_settings(self._settings)
         self._log_message("Settings saved", "system")
 
