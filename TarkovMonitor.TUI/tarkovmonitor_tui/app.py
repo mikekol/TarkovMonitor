@@ -380,6 +380,7 @@ class TarkovMonitorApp(App):
         self.in_raid = False
         map_name = self._resolve_map_name(info.map)
         self._log_message(f"Ended {map_name} raid", "raid")
+        self._current_raid_map = ""
         self._update_raid_info(None)
         self._tarkov_dev.record_activity()
         self._start_scav_countdown()
@@ -390,6 +391,7 @@ class TarkovMonitorApp(App):
         self.in_raid = False
         map_name = self._resolve_map_name(data.get("map", ""))
         self._log_message(f"Exited {map_name} raid", "raid")
+        self._current_raid_map = ""
         self._update_raid_info(None)
         self._tarkov_dev.record_activity()
         self._start_scav_countdown()
