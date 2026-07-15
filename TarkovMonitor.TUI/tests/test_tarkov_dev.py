@@ -181,3 +181,225 @@ async def test_fetch_tasks_parses_fail_if_complete(httpx_mock):
     task_b = client.tasks[1]
     assert task_b.restartable is False
     assert task_b.fail_if_complete == ["task-a"]
+
+
+# --- _fetch_traders ---
+
+async def test_fetch_traders_parses_fence_reputation_levels(httpx_mock):
+    httpx_mock.add_response(
+        url="https://json.tarkov.dev/regular/traders",
+        json={
+            "data": {
+                "traders": [
+                    {
+                        "id": "fence-id",
+                        "name": "Fence",
+                        "normalizedName": "fence",
+                        "reputationLevels": [
+                            {"minimumReputation": -7.0, "scavCooldownModifier": 1.5},
+                            {"minimumReputation": -0.02, "scavCooldownModifier": 1.0},
+                            {"minimumReputation": 6.0, "scavCooldownModifier": 0.5},
+                        ],
+                    }
+                ]
+            }
+        },
+    )
+    client = TarkovDevClient()
+    await client._fetch_traders()
+    await client.close()
+
+    assert len(client.traders) == 1
+    fence = client.traders[0]
+    assert fence.normalized_name == "fence"
+    assert len(fence.reputation_levels) == 3
+    assert fence.reputation_levels[0].minimum_reputation == -7.0
+    assert fence.reputation_levels[0].scav_cooldown_modifier == 1.5
+    assert fence.reputation_levels[2].scav_cooldown_modifier == 0.5
+
+
+# --- get_fence ---
+
+async def test_get_fence_finds_fence_trader(httpx_mock):
+    httpx_mock.add_response(
+        url="https://json.tarkov.dev/regular/traders",
+        json={
+            "data": {
+                "traders": [
+                    {"id": "1", "name": "Prapor", "normalizedName": "prapor", "reputationLevels": []},
+                    {"id": "2", "name": "Fence", "normalizedName": "fence", "reputationLevels": []},
+                ]
+            }
+        },
+    )
+    client = TarkovDevClient()
+    await client._fetch_traders()
+    await client.close()
+
+    fence = client.get_fence()
+    assert fence is not None
+    assert fence.normalized_name == "fence"
+
+
+def test_get_fence_returns_none_when_not_loaded():
+    client = TarkovDevClient.__new__(TarkovDevClient)
+    client.traders = []
+    assert client.get_fence() is None
+
+
+# --- _fetch_hideout ---
+
+async def test_fetch_hideout_parses_stations_and_bonuses(httpx_mock):
+    httpx_mock.add_response(
+        url="https://json.tarkov.dev/regular/hideout",
+        json={
+            "data": {
+                "stations": [
+                    {
+                        "id": "station-1",
+                        "name": "Air Filtering Unit",
+                        "normalizedName": "air-filtering-unit",
+                        "levels": [
+                            {
+                                "id": "level-1",
+                                "level": 1,
+                                "bonuses": [
+                                    {"type": "ScavCooldownTimer", "value": -0.05}
+                                ],
+                            },
+                            {
+                                "id": "level-2",
+                                "level": 2,
+                                "bonuses": [
+                                    {"type": "ScavCooldownTimer", "value": -0.1}
+                                ],
+                            },
+                        ],
+                    }
+                ]
+            }
+        },
+    )
+    client = TarkovDevClient()
+    await client._fetch_hideout()
+    await client.close()
+
+    assert len(client.hideout_stations) == 1
+    station = client.hideout_stations[0]
+    assert station.normalized_name == "air-filtering-unit"
+    assert len(station.levels) == 2
+    assert station.levels[0].id == "level-1"
+    assert station.levels[0].bonuses[0].type == "ScavCooldownTimer"
+    assert station.levels[0].bonuses[0].value == -0.05
+
+
+# --- _fetch_items (scavCooldownSeconds + playerLevels) ---
+
+async def test_fetch_items_parses_settings_and_player_levels(httpx_mock):
+    httpx_mock.add_response(
+        url="https://json.tarkov.dev/regular/items",
+        json={
+            "data": {
+                "items": [],
+                "settings": {"scavCooldownSeconds": 2100},
+                "playerLevels": [
+                    {"level": 1, "exp": 0},
+                    {"level": 2, "exp": 1000},
+                    {"level": 3, "exp": 3000},
+                ],
+            }
+        },
+    )
+    httpx_mock.add_response(
+        url="https://json.tarkov.dev/regular/items_en",
+        json={},
+    )
+    client = TarkovDevClient()
+    await client._fetch_items()
+    await client.close()
+
+    assert client.scav_cooldown_base_seconds == 2100
+    assert len(client.player_levels) == 3
+    assert client.player_levels[1].level == 2
+    assert client.player_levels[1].exp == 1000
+
+
+# --- find_player_level ---
+
+def test_find_player_level_returns_correct_level():
+    client = TarkovDevClient.__new__(TarkovDevClient)
+    client.player_levels = [
+        PlayerLevel(level=1, exp=0),
+        PlayerLevel(level=2, exp=1000),
+        PlayerLevel(level=3, exp=3000),
+    ]
+    assert client.find_player_level(0) == 1
+    assert client.find_player_level(999) == 1
+    assert client.find_player_level(1000) == 2
+    assert client.find_player_level(2999) == 2
+    assert client.find_player_level(3000) == 3
+    assert client.find_player_level(99999) == 3
+
+
+def test_find_player_level_empty_returns_1():
+    client = TarkovDevClient.__new__(TarkovDevClient)
+    client.player_levels = []
+    assert client.find_player_level(5000) == 1
+
+
+# --- fetch_player_name ---
+
+async def test_fetch_player_name_resolves_account_id(httpx_mock):
+    httpx_mock.add_response(
+        url="https://players.tarkov.dev/profile/index.json",
+        json={"acc-123": "TestPlayer", "acc-456": "OtherPlayer"},
+    )
+    client = TarkovDevClient()
+    name = await client.fetch_player_name("acc-123")
+    await client.close()
+    assert name == "TestPlayer"
+
+
+async def test_fetch_player_name_fallback_on_missing_id(httpx_mock):
+    httpx_mock.add_response(
+        url="https://players.tarkov.dev/profile/index.json",
+        json={"acc-999": "SomeOne"},
+    )
+    client = TarkovDevClient()
+    name = await client.fetch_player_name("acc-unknown")
+    await client.close()
+    assert name == "acc-unknown"
+
+
+async def test_fetch_player_name_fallback_on_http_error(httpx_mock):
+    httpx_mock.add_response(
+        url="https://players.tarkov.dev/profile/index.json",
+        status_code=500,
+    )
+    client = TarkovDevClient()
+    name = await client.fetch_player_name("acc-123")
+    await client.close()
+    assert name == "acc-123"
+
+
+# --- maybe_refresh (timing-based — tested with direct _last_fetched manipulation) ---
+
+async def test_maybe_refresh_skips_when_recently_fetched(httpx_mock):
+    client = TarkovDevClient()
+    import time
+    client._last_fetched = time.monotonic()  # just fetched
+    client._last_activity = time.monotonic()
+    # No HTTP mocks needed — update() should NOT be called
+    await client.maybe_refresh()
+    await client.close()
+    # If update() had been called, pytest-httpx would raise UnmatchedRequests
+
+
+async def test_maybe_refresh_skips_when_no_recent_activity(httpx_mock):
+    client = TarkovDevClient()
+    import time
+    client._last_fetched = 0.0  # stale
+    client._last_activity = 0.0  # no activity
+    # No HTTP mocks needed — update() should NOT be called (no activity)
+    await client.maybe_refresh()
+    await client.close()
