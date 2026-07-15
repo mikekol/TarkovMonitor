@@ -20,6 +20,15 @@ Project("{B7DD6F7E-DEF8-4E67-B5B7-07EF123DB6F0}") = "TarkovMonitor.Installer", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TarkovMonitor.Core", "TarkovMonitor.Core\TarkovMonitor.Core.csproj", "{D8209BA8-AE17-4896-906C-CF1BE6BBCE5F}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TarkovMonitor.TUI", "TarkovMonitor.TUI", "{15F22DBF-8F9C-470F-B853-7800DA3180F2}"
+	ProjectSection(SolutionItems) = preProject
+		TarkovMonitor.TUI\pyproject.toml = TarkovMonitor.TUI\pyproject.toml
+		TarkovMonitor.TUI\requirements.txt = TarkovMonitor.TUI\requirements.txt
+		TarkovMonitor.TUI\run.bat = TarkovMonitor.TUI\run.bat
+		TarkovMonitor.TUI\generate_proto.py = TarkovMonitor.TUI\generate_proto.py
+		TarkovMonitor.TUI\protos\game_events.proto = TarkovMonitor.TUI\protos\game_events.proto
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
