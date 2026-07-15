@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "tarkovmonitor-tui"
 version = "0.1.0"
@@ -11,5 +15,19 @@ dependencies = [
     "watchfiles>=1.0.0",
 ]
 
+[tool.setuptools.packages]
+find = { include = ["tarkovmonitor_tui"] }
+
 [project.scripts]
 tarkovmonitor-tui = "tarkovmonitor_tui.app:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-httpx>=0.30.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
