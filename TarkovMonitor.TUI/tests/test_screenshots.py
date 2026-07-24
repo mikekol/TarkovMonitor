@@ -66,6 +66,17 @@ def test_parse_screenshot_empty_map_defaults_empty():
     assert result.map_name == ""
 
 
+def test_parse_screenshot_single_decimal_coords():
+    # Real EFT screenshots use 1 decimal place for xyz coordinates
+    fname = "2020-07-02[01-49]_-106.0, 28.6, 190.6_0.0, -0.9, 0.1, -0.4 (0).png"
+    result = parse_screenshot(fname, current_map="woods")
+    assert result is not None
+    assert result.x == pytest.approx(-106.0, abs=0.01)
+    assert result.y == pytest.approx(28.6, abs=0.01)
+    assert result.z == pytest.approx(190.6, abs=0.01)
+    assert result.map_name == "woods"
+
+
 # --- ScreenshotWatcher ---
 
 async def test_screenshot_watcher_calls_callback_for_new_png(tmp_path):

@@ -19,7 +19,7 @@ SCREENSHOT_PATTERN = re.compile(
     r"\d{4}-\d{2}-\d{2}\[\d{2}-\d{2}\]_?(?P<position>.+) \(\d\)\.png"
 )
 POSITION_PATTERN = re.compile(
-    r"(?P<x>-?[\d]+\.[\d]{2}), (?P<y>-?[\d]+\.[\d]{2}), (?P<z>-?[\d]+\.[\d]{2})_?"
+    r"(?P<x>-?[\d]+\.[\d]+), (?P<y>-?[\d]+\.[\d]+), (?P<z>-?[\d]+\.[\d]+)_?"
     r"(?P<rx>-?[\d.]{1}\.[\d]{1,5}), (?P<ry>-?[\d.]{1}\.[\d]{1,5}), "
     r"(?P<rz>-?[\d.]{1}\.[\d]{1,5}), (?P<rw>-?[\d.]{1}\.[\d]{1,5})"
 )
@@ -73,9 +73,18 @@ def parse_screenshot(filename: str, current_map: str = "") -> PlayerPosition | N
 
 
 def get_screenshots_path() -> Path:
-    """Return the default EFT screenshots path."""
-    docs = Path(os.path.expanduser("~/Documents"))
-    return docs / "Escape From Tarkov" / "Screenshots"
+    """Return the default EFT screenshots path, honoring OneDrive folder redirection."""
+    try:
+        import winreg
+        key = winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER,
+            r"Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders",
+        )
+        docs = Path(winreg.QueryValueEx(key, "Personal")[0])
+        winreg.CloseKey(key)
+    except Exception:
+        docs = Path(os.path.expanduser("~/Documents"))
+    return docs / "Escape from Tarkov" / "Screenshots"
 
 
 class ScreenshotWatcher:

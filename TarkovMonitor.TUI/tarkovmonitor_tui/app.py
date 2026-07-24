@@ -687,8 +687,9 @@ class TarkovMonitorApp(App):
         if path.exists():
             self._screenshot_watcher = ScreenshotWatcher(path, self._on_new_screenshot)
             self._screenshot_watcher.start()
+            self._log_message(f"Watching screenshots: {path}", "info")
         else:
-            log.debug("Screenshots path does not exist, watcher not started: %s", path)
+            self._log_message(f"Screenshots path not found (check Settings): {path}", "error")
 
     def _restart_socket_client(self) -> None:
         if self._socket_client is not None:
