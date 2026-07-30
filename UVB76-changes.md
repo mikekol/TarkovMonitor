@@ -122,6 +122,55 @@ One new warning suppression was added to `TarkovMonitor.csproj`: `WFO1000`, whic
 
 ---
 
+## Media Control: TUI Events vs. GUI MediaController
+
+The main GUI (introduced in a recent upstream merge) includes `MediaController.cs` — a Windows-native class that automatically pauses music players at raid start and resumes them afterward. The TUI takes a deliberately different approach via its **Events system**.
+
+### What MediaController does
+
+`MediaController` uses two Windows-only APIs:
+
+- **Windows Media Sessions** (`GlobalSystemMediaTransportControlsSessionManager`) — the same API powering the Win+K overlay. It discovers any running music app (Spotify, foobar2000, Winamp, etc.) and sends play/pause commands directly.
+- **NAudio/WASAPI** — direct access to per-process audio session volumes, enabling a smooth 3-second cubic-eased fade-out before pause and fade-in on resume.
+
+The full flow on raid start: discover playing music sessions → identify music (vs. video/browser audio) → fade out over 3 seconds → send pause command → hold muted until audio peak drops below threshold → restore volume. On raid stop: wait 2 seconds → fade back in → retry on `ExitedPostRaidMenus` for any sessions that didn't resume cleanly. All of this is automatic, requires no setup, and is gated by a single `pauseMediaOnRaid` checkbox.
+
+### What the TUI Events system does
+
+The TUI has no access to Windows Media Sessions or WASAPI (it's Python, and targeting cross-platform portability). Instead, the **Events tab** lets users assign an arbitrary shell command to any game event (`raid_starting`, `raid_stopping`, `raid_ended`, etc.). When the event fires, the command runs in a background thread and its output is optionally surfaced in the TUI log.
+
+For media control specifically, the recommended setup is wiring `raid_starting` → `python scripts/streamdeck_press.py pause` and `raid_stopping` → `python scripts/streamdeck_press.py play`. The `streamdeck_press.py` script controls Spotify via the Elgato MCP server → Stream Deck → Schmotify plugin chain.
+
+### Comparison
+
+| | GUI `MediaController` | TUI Events + `streamdeck_press.py` |
+|---|---|---|
+| **Setup required** | None (checkbox only) | Elgato MCP server + Stream Deck + Schmotify plugin |
+| **Apps controlled** | Any music app (universal) | Spotify only |
+| **Volume fade** | 3-second cubic ease-in/out | None (hard cut) |
+| **Silence detection** | Yes (waits for audio peak < 0.001) | No |
+| **Retry on resume** | Yes (`ExitedPostRaidMenus`) | No |
+| **Extensibility** | Media control only | Any shell command |
+
+### Why the TUI approach is more powerful
+
+The Events system's real value is **composability**. Every game event can trigger any command, not just media control. Examples of what users wire to events today:
+
+- `raid_starting` → pause Spotify via Schmotify
+- `raid_stopping` → resume Spotify
+- `raid_starting` → dim desk lamp via a Home Assistant CLI command
+- `match_found` → send a Discord webhook notification
+- `air_filter_on` / `air_filter_off` → run a custom script to record filter state
+- `scav_available` → trigger a Stream Deck profile switch
+
+The GUI's MediaController is excellent at what it does — zero setup, works with every music player, smooth fade. The TUI's Events system trades the polish of that one feature for the ability to automate arbitrary responses to every game event.
+
+### Developer TODO — winsdk Python wrapper
+
+To bring TUI media control closer to `MediaController` parity on Windows without requiring Stream Deck, evaluate wrapping `Windows.Media.Control` via the `winsdk` Python package (which exposes WinRT APIs). This would allow the TUI to discover playing music sessions and send play/pause via the same Windows Media Session API the GUI uses — no external dependencies required. The `winsdk` package is Windows-only and relatively young; verify it supports `GlobalSystemMediaTransportControlsSessionManager` before committing to it. If viable, implement as a standalone script (e.g., `scripts/media_control.py pause`) so it stays composable with the Events system rather than being built in.
+
+---
+
 ## MSI Installer
 
 The `TarkovMonitor.Installer` project uses WiX 4.0.6 to build a standard MSI. The installer packages:
@@ -132,6 +181,8 @@ The `TarkovMonitor.Installer` project uses WiX 4.0.6 to build a standard MSI. Th
 - **Tools** — management console shortcut (for the `Install-TarkovMonitorService.ps1` script).
 
 The feature tree lets users choose which components to install. `Build-Installer.ps1` handles the full pipeline: publishes all projects, generates harvest WXS files (WiX's file-listing format), and builds the MSI into `dist/`.
+
+**Developer note — why WiX 4 and not WiX 5:** WiX 3 was the traditional choice but relies on .NET Framework MSBuild tooling that's incompatible with SDK-style `.csproj` files. WiX 4 integrates cleanly via `dotnet tool install` and is what the project was originally built on. WiX 5 exists but introduces breaking changes to WXS authoring syntax — particularly around custom actions (`WixQuietExec` was removed in favour of `WixToolset.Mba.Core`) and the Windows Service installer extensions — that would require a non-trivial rewrite of `Service.wxs`, `ConfigureService.wxs`, and `ServiceAccount.wxs` for no functional gain at this time. Known WiX 4.0.6 quirk: `HarvestDirectory` in the `.wixproj` is silently broken (files are not harvested), so `Build-Installer.ps1` calls `wix heat dir` directly as a workaround. Evaluate WiX 5 once it has broader ecosystem adoption and once the Windows Service authoring story stabilises.
 
 ---
 

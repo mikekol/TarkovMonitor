@@ -178,6 +178,12 @@ PMC countdown has started. `startedTimeMs` not yet set for scavs at this point.
 
 Raid has begun (countdown ended for PMC; immediate for scav). `startedTimeMs` is set.
 
+#### `RaidStopping`
+
+The game has signalled that the raid is ending (the `GameStopping` log marker appeared). Fires before post-raid screens are shown. Data map is **empty** — no payload.
+
+This event is useful for triggering actions that should happen as soon as the raid ends, before the player returns to the main menu (e.g., resuming paused media, resetting timers).
+
 #### `RaidExited`
 
 Player has left the raid (extracted, died, etc.).
@@ -714,6 +720,7 @@ MatchFound              ← server locked in, queueTime available
 RaidStarting            ← PMC countdown begins
 RaidStarted             ← countdown ended, in raid
   PlayerPosition        ← repeated as screenshots are taken
+RaidStopping            ← GameStopping marker in logs (empty payload)
 RaidExited              ← player extracted or died
 RaidEnded               ← post-raid screen shown
 ExitedPostRaidMenus     ← back at main menu

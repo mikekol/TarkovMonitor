@@ -122,6 +122,14 @@ The installer will:
 - Add a firewall rule allowing the service to accept local connections on port 50051.
 - Create Start Menu and Desktop shortcuts.
 
+During installation, you will be prompted to choose a **service account** — either **LocalService** or **NetworkService**. Both are standard, unprivileged Windows service accounts (neither requires administrator or LocalSystem privileges):
+
+- **LocalService** *(default, recommended for most users)* — The service runs with no outbound network rights. It can only communicate on the local machine. This is the safest choice: TarkovMonitor only needs to read EFT log files on your local disk and listen on `localhost:50051`. Choose LocalService unless you have a specific reason not to.
+
+- **NetworkService** — The service gains outbound network access and authenticates to remote resources using the machine's computer account. Choose this only if your EFT installation or log files are stored on a **network share** that requires domain authentication, or if you are running TarkovMonitor in an enterprise environment where the machine account has appropriate access to those shares.
+
+If you are unsure, choose LocalService. You can always change the service account later via the Windows Services console (`services.msc`).
+
 After installation, launch **TarkovMonitor** from the Start Menu or Desktop shortcut. The service starts automatically with Windows.
 
 ## Setup
@@ -202,6 +210,8 @@ To build the Windows installer:
    ```
 
 The built MSI will be in the `dist/` directory as `TarkovMonitor-<version>.msi`.
+
+> **Developer note — WiX 4:** The installer uses **WiX 4.0.6**. WiX 3 was the long-running standard but targets .NET Framework MSBuild and is incompatible with SDK-style `.csproj` files; WiX 4 integrates cleanly via `dotnet tool install`. WiX 5 is the newest major release but introduces breaking changes to the WXS authoring format (custom actions, service install syntax) that would require a non-trivial migration with no functional benefit for our current scenario. One known WiX 4.0.6 quirk: `HarvestDirectory` in the `.wixproj` is silently broken, so `Build-Installer.ps1` runs `wix heat` directly instead. Evaluate WiX 5 migration once it has broader adoption and confirmed stability for Windows Service installer scenarios.
 
 ### Architecture Overview
 
