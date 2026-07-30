@@ -8,9 +8,8 @@
     running as a local HTTP server on port 9090. The server is a Node.js process
     launched with the --http flag; it is NOT started automatically by Stream Deck.
 
-    This script creates a Task Scheduler task under the current user account that
-    runs the server at logon, before any interactive session is available, so it
-    is ready by the time Stream Deck and any calling scripts start.
+    This script registers a Task Scheduler logon task that runs node.exe directly
+    with the server script — no wrappers, no intermediary processes.
 
     The task is idempotent: running this script again updates the existing task
     rather than creating a duplicate.
@@ -36,16 +35,15 @@ if (-not (Test-Path $ServerScript)) {
     exit 1
 }
 
-# Run hidden so no console window appears at logon.
 $Action = New-ScheduledTaskAction `
     -Execute $NodeExe `
-    -Argument "`"$ServerScript`" --http"
+    -Argument "`"$ServerScript`" --http -v"
 
 # Trigger at logon for the current user only.
 $Trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 
 # ExecutionTimeLimit 0 means no timeout — the server runs indefinitely.
-# Hidden suppresses the task from the Task Scheduler UI's default view.
+# Hidden suppresses the task from Task Scheduler's default view.
 $Settings = New-ScheduledTaskSettingsSet `
     -ExecutionTimeLimit (New-TimeSpan -Hours 0) `
     -RestartCount 3 `
