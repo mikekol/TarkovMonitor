@@ -45,11 +45,13 @@ $Action = New-ScheduledTaskAction `
 $Trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 
 # ExecutionTimeLimit 0 means no timeout — the server runs indefinitely.
+# Hidden suppresses the task from the Task Scheduler UI's default view.
 $Settings = New-ScheduledTaskSettingsSet `
     -ExecutionTimeLimit (New-TimeSpan -Hours 0) `
     -RestartCount 3 `
     -RestartInterval (New-TimeSpan -Minutes 1) `
-    -StartWhenAvailable
+    -StartWhenAvailable `
+    -Hidden
 
 # Register (or overwrite) the task scoped to the current user, no elevation needed.
 Register-ScheduledTask `
