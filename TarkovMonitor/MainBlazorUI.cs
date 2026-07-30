@@ -320,14 +320,13 @@ namespace TarkovMonitor
             monMessage.Buttons.Add(screenshotButton);
         }
 
-        private void Eft_RaidEnded(object? sender, RaidInfoEventArgs e)
+        private async void Eft_RaidEnded(object? sender, RaidInfoEventArgs e)
         {
             inRaid = false;
             _currentRaidInfo = e.RaidInfo;
-            var mapName = e.RaidInfo.Map;
-            var map = TarkovDev.Maps.Find(m => m.nameId == mapName);
-            if (map != null) mapName = map.name;
-            MonitorMessage monMessage = new($"Ended {mapName} raid");
+            await ResumeMediaAfterRaid();
+
+            MonitorMessage monMessage = new($"Ended {e.RaidInfo.Map?.name} raid");
 
             if (e.RaidInfo.Screenshots.Count > 0)
                 Handle_Screenshots(e, monMessage);
@@ -447,13 +446,11 @@ namespace TarkovMonitor
             // EFT writes the screenshot before the player has spawned; skip uninitialized positions
             if (e.Position.X == 0 && e.Position.Y == 0 && e.Position.Z == 0) return;
 
-            var map = TarkovDev.Maps.Find(m => m.nameId == e.RaidInfo.Map);
-            if (map == null)
+            if (e.RaidInfo.Map == null)
             {
-                messageLog.AddMessage($"Could not find map {e.RaidInfo.Map}");
                 return;
             }
-            messageLog.AddMessage($"Player position on {map.name}: x: {e.Position.X}, y: {e.Position.Y}, z: {e.Position.Z}");
+            messageLog.AddMessage($"Player position on {e.RaidInfo.Map.name}: x: {e.Position.X}, y: {e.Position.Y}, z: {e.Position.Z}");
 
             // Send position + zoom to all configured remotes
             await SocketClient.SendPlayerPositionAndZoom(e);
@@ -461,7 +458,7 @@ namespace TarkovMonitor
             // Optionally navigate to map on all remotes
             if (Properties.Settings.Default.navigateMapOnPositionUpdate)
             {
-                await SocketClient.NavigateToMap(map);
+                await SocketClient.NavigateToMap(e.RaidInfo.Map);
             }
         }
 
@@ -508,10 +505,15 @@ namespace TarkovMonitor
         {
             // Reset last map so first screenshot in any new raid always triggers zoom
             SocketClient.ResetLastMap();
-            if (!Properties.Settings.Default.autoNavigateMap) return;
-            var map = TarkovDev.Maps.Find(m => m.nameId == e.RaidInfo.Map);
-            if (map == null) return;
-            SocketClient.NavigateToMap(map);
+            if (!Properties.Settings.Default.autoNavigateMap)
+            {
+                return;
+            }
+            if (e.RaidInfo.Map == null)
+            {
+                return;
+            }
+            SocketClient.NavigateToMap(e.RaidInfo.Map);
         }
 
         private void Eft_GroupInviteAccept(object? sender, GroupInviteAcceptedEventArgs e)
@@ -562,10 +564,11 @@ namespace TarkovMonitor
         {
             if (Properties.Settings.Default.matchFoundAlert)
                 Sound.Play("match_found");
-            var mapName = e.RaidInfo.Map;
-            var map = TarkovDev.Maps.Find(m => m.nameId == mapName);
-            if (map != null) mapName = map.name;
-            messageLog.AddMessage($"Matching complete on {mapName} after {e.RaidInfo.QueueTime} seconds");
+            if (e.RaidInfo.Map == null)
+            {
+                return;
+            }
+            messageLog.AddMessage($"Matching complete on {e.RaidInfo.Map.name} after {e.RaidInfo.QueueTime} seconds");
         }
 
         private void Eft_NewLogData(object? sender, NewLogDataEventArgs e)
@@ -657,10 +660,50 @@ namespace TarkovMonitor
             messageLog.AddMessage($"Error {e.Context}: {e.Exception.Message}\n{e.Exception.StackTrace}", "exception");
         }
 
-        private void Eft_RaidStarting(object? sender, RaidInfoEventArgs e)
+        private async void Eft_RaidStarting(object? sender, RaidInfoEventArgs e)
         {
             if (Properties.Settings.Default.raidStartAlert)
                 Sound.Play("raid_starting");
+
+            await PauseMediaForRaid();
+        }
+
+        private async Task PauseMediaForRaid()
+        {
+            if (!Properties.Settings.Default.pauseMediaOnRaid) return;
+
+            try
+            {
+                int pausedSessions = await MediaController.PauseAsync();
+                messageLog.AddMessage($"Paused {pausedSessions} music session(s)", "info");
+            }
+            catch (Exception ex)
+            {
+                messageLog.AddMessage($"Error pausing media: {ex.Message}", "exception");
+            }
+        }
+
+        private async void Eft_RaidStopping(object? sender, EventArgs e)
+        {
+            await ResumeMediaAfterRaid();
+        }
+
+        private async Task ResumeMediaAfterRaid()
+        {
+            if (!Properties.Settings.Default.pauseMediaOnRaid) return;
+
+            try
+            {
+                int resumedSessions = await MediaController.ResumeAsync();
+                if (resumedSessions > 0)
+                {
+                    messageLog.AddMessage($"Resumed {resumedSessions} music session(s)", "info");
+                }
+            }
+            catch (Exception ex)
+            {
+                messageLog.AddMessage($"Error resuming media: {ex.Message}", "exception");
+            }
         }
 
         private async void Eft_RaidStart(object? sender, RaidInfoEventArgs e)
@@ -668,37 +711,43 @@ namespace TarkovMonitor
             inRaid = true;
             _currentRaidInfo = e.RaidInfo;
             Stats.AddRaid(e);
-            var mapName = e.RaidInfo.Map;
-            var map = TarkovDev.Maps.Find(m => m.nameId == mapName);
-            if (map != null) mapName = map.name;
+            
+            // GameStarting is not always logged for scav raids, so pause here as a fallback.
+            if (e.RaidInfo.StartingTime == null)
+            {
+                await PauseMediaForRaid();
+            }
+            
             if (!e.RaidInfo.Reconnected && e.RaidInfo.RaidType != RaidType.Unknown)
             {
-                MonitorMessage monMessage = new($"Starting {e.RaidInfo.RaidType} raid on {mapName}");
-                if (map != null && e.RaidInfo.StartedTime != null && map.HasGoons())
+                MonitorMessage monMessage = new($"Starting {e.RaidInfo.RaidType} raid on {e.RaidInfo.Map?.name}");
+                if (e.RaidInfo.Map != null && e.RaidInfo.StartedTime != null && e.RaidInfo.Map.HasGoons())
                 {
                     AddGoonsButton(monMessage, e.RaidInfo);
                 }
-                else if (map == null)
+                else if (e.RaidInfo.Map == null)
                 {
                     monMessage.Message = $"Starting {e.RaidInfo.RaidType} raid on:";
                     MonitorMessageSelect select = new();
                     foreach (var gameMap in TarkovDev.Maps)
-                        select.Options.Add(new(gameMap.name, gameMap.nameId));
+                        select.Options.Add(new(gameMap.name, gameMap.id));
                     select.Placeholder = "Select map";
                     monMessage.Selects.Add(select);
                     MonitorMessageButton mapButton = new("Set map", Icons.Material.Filled.Map);
                     mapButton.OnClick += () =>
                     {
                         if (select.Selected == null) return;
-                        e.RaidInfo.Map = select.Selected.Value;
+                        e.RaidInfo.Map = TarkovDev.Maps.Find(m => m.id == select.Selected.Value);
                         monMessage.Message = $"Starting {e.RaidInfo.RaidType} raid on {select.Selected.Text}";
                         monMessage.Buttons.Clear();
                         monMessage.Selects.Clear();
                         if (Properties.Settings.Default.autoNavigateMap)
                         {
-                            var map = TarkovDev.Maps.Find(m => m.nameId == e.RaidInfo.Map);
-                            if (map == null) return;
-                            SocketClient.NavigateToMap(map);
+                            if (e.RaidInfo.Map == null)
+                            {
+                                return;
+                            }
+                            SocketClient.NavigateToMap(e.RaidInfo.Map);
                         }
                     };
                     monMessage.Buttons.Add(mapButton);
@@ -709,7 +758,7 @@ namespace TarkovMonitor
             }
             else
             {
-                messageLog.AddMessage($"Re-entering raid on {mapName}");
+                messageLog.AddMessage($"Re-entering raid on {e.RaidInfo.Map?.name}");
             }
 
             if (Properties.Settings.Default.runthroughAlert && !e.RaidInfo.Reconnected && (e.RaidInfo.RaidType == RaidType.PMC || e.RaidInfo.RaidType == RaidType.PVE))
@@ -722,7 +771,7 @@ namespace TarkovMonitor
             {
                 try
                 {
-                    await TarkovDev.PostQueueTime(e.RaidInfo.Map, (int)Math.Round(e.RaidInfo.QueueTime), e.RaidInfo.RaidType.ToString().ToLower(), GameWatcher.CurrentProfile.Type);
+                    await TarkovDev.PostQueueTime(e.RaidInfo.Map.nameId, (int)Math.Round(e.RaidInfo.QueueTime), e.RaidInfo.RaidType.ToString().ToLower(), GameWatcher.CurrentProfile.Type);
                 }
                 catch (Exception ex)
                 {
@@ -735,18 +784,15 @@ namespace TarkovMonitor
 
         private void AddGoonsButton(MonitorMessage monMessage, RaidInfo raidInfo)
         {
-            var mapName = raidInfo.Map;
-            var map = TarkovDev.Maps.Find(m => m.nameId == mapName);
-            if (map != null) mapName = map.name;
-            if (map != null && raidInfo.StartedTime != null && map.HasGoons())
+            if (raidInfo.Map != null && raidInfo.StartedTime != null && raidInfo.Map.HasGoons())
             {
                 MonitorMessageButton goonsButton = new($"Report Goons", Icons.Material.Filled.Groups);
                 goonsButton.OnClick = async () =>
                 {
                     try
                     {
-                        await TarkovDev.PostGoonsSighting(raidInfo.Map, (DateTime)raidInfo.StartedTime, Int32.Parse(raidInfo.Profile.AccountId), GameWatcher.CurrentProfile.Type);
-                        messageLog.AddMessage($"Goons reported on {mapName}", "info");
+                        await TarkovDev.PostGoonsSighting(raidInfo.Map?.nameId, (DateTime)raidInfo.StartedTime, Int32.Parse(raidInfo.Profile.AccountId), GameWatcher.CurrentProfile.Type);
+                        messageLog.AddMessage($"Goons reported on {raidInfo.Map?.name}", "info");
                     }
                     catch (Exception ex)
                     {
@@ -755,7 +801,7 @@ namespace TarkovMonitor
                     monMessage.Buttons.Remove(goonsButton);
                 };
                 goonsButton.Confirm = new(
-                    $"Report Goons on {mapName}",
+                    $"Report Goons on {raidInfo.Map?.name}",
                     "<p>Please only submit a report if you saw the goons in this raid.</p><p><strong>Notice:</strong> By submitting a goons report, you consent to collection of your IP address and EFT account id for report verification purposes.</p>",
                     "Submit report", "Cancel"
                 );
@@ -764,10 +810,12 @@ namespace TarkovMonitor
             }
         }
 
-        private void Eft_RaidExited(object? sender, RaidExitedEventArgs e)
+        private async void Eft_RaidExited(object? sender, RaidExitedEventArgs e)
         {
             runthroughTimer.Stop();
             inRaid = false;
+            await ResumeMediaAfterRaid();
+            
             try
             {
                 var mapName = e.Map;

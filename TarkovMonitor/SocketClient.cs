@@ -185,8 +185,7 @@ namespace TarkovMonitor
 
         public static async Task UpdatePlayerPosition(PlayerPositionEventArgs e)
         {
-            var map = TarkovDev.Maps.Find(m => m.nameId == e.RaidInfo.Map)?.normalizedName;
-            if (map == null && e.RaidInfo.Map != null)
+            if (e.RaidInfo.Map == null)
             {
                 return;
             }
@@ -249,10 +248,9 @@ namespace TarkovMonitor
 
         public static JsonObject GetPlayerPositionMessage(PlayerPositionEventArgs e, int? viewRadius = null)
         {
-            var map = TarkovDev.Maps.Find(m => m.nameId == e.RaidInfo.Map)?.normalizedName;
-            if (map == null && e.RaidInfo.Map != null)
+            if (e.RaidInfo.Map == null)
             {
-                throw new Exception($"Map {e.RaidInfo.Map} not found");
+                throw new Exception("Map not found");
             }
             var data = new JsonObject
             {
