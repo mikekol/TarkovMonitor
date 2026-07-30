@@ -132,15 +132,15 @@
                 <MudSwitch @bind-Value="@NavigateMapOnPositionUpdateSwitch" Label="@LocalizationService.GetString("SwitchToTarkovDevMapOnPositionUpdate")" Color="Color.Info" />
             </div>
             <div style="margin-top: 8px;">
-                <MudSwitch @bind-Value="@autoZoomInput" Label="Zoom to player on screenshot" Color="Color.Info" />
+                <MudSwitch @bind-Value="@autoZoomInput" Label="@LocalizationService.GetString("ZoomToPlayerOnScreenshot")" Color="Color.Info" />
                 <MudNumericField @bind-Value="@viewRadiusInput"
-                                 Label="View radius (meters)"
+                                 Label="@LocalizationService.GetString("ViewRadiusMeters")"
                                  Min="50" Max="5000" Step="25"
                                  Disabled="@(!autoZoomInput)"
                                  Variant="Variant.Outlined"
                                  Margin="Margin.Dense"
                                  Adornment="Adornment.End" AdornmentText="m"
-                                 HelperText="Meters shown around your position on each new map (50 = very close, 1000 = wide area)"
+                                 HelperText="@LocalizationService.GetString("ViewRadiusHelperText")"
                                  Style="max-width: 200px; margin-top: 4px;" />
             </div>
             <div>
@@ -154,7 +154,7 @@
                 }
             </MudSelect>
             <div style="margin-top: 16px;">
-                <MudButton @onclick="SaveRemoteSettings" Variant="Variant.Filled" Color="Color.Primary">Save Map &amp; Remote Settings</MudButton>
+                <MudButton @onclick="SaveRemoteSettings" Variant="Variant.Filled" Color="Color.Primary">@LocalizationService.GetString("SaveMapAndRemoteSettings")</MudButton>
             </div>
         </MudPaper>
     </MudItem>
@@ -730,6 +730,6 @@
         Properties.Settings.Default.viewRadiusOnLocationUpdate = viewRadiusInput;
         Properties.Settings.Default.Save();
         SocketClient.ResetLastMap();
-        messageLog.AddMessage("Remote settings saved successfully.", "success");
+        messageLog.AddMessage(LocalizationService.GetString("RemoteSettingsSaved"), "success");
     }
 }

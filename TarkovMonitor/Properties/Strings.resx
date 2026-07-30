@@ -402,4 +402,19 @@
   <data name="RetrievedDataFromTarkovTracker" xml:space="preserve">
     <value>Retrieved {0} level {1} {2} progress from Tarkov Tracker</value>
   </data>
+  <data name="ZoomToPlayerOnScreenshot" xml:space="preserve">
+    <value>Zoom to player on screenshot</value>
+  </data>
+  <data name="ViewRadiusMeters" xml:space="preserve">
+    <value>View radius (meters)</value>
+  </data>
+  <data name="ViewRadiusHelperText" xml:space="preserve">
+    <value>Meters shown around your position on each new map (50 = very close, 1000 = wide area)</value>
+  </data>
+  <data name="SaveMapAndRemoteSettings" xml:space="preserve">
+    <value>Save Map &amp; Remote Settings</value>
+  </data>
+  <data name="RemoteSettingsSaved" xml:space="preserve">
+    <value>Remote settings saved successfully.</value>
+  </data>
 </root>
