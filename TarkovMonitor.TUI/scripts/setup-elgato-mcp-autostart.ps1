@@ -44,8 +44,9 @@ $Action = New-ScheduledTaskAction `
 # Trigger at logon for the current user only.
 $Trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 
+# ExecutionTimeLimit 0 means no timeout — the server runs indefinitely.
 $Settings = New-ScheduledTaskSettingsSet `
-    -ExecutionTimeLimit (New-TimeSpan -Hours 0) `  # No timeout — runs indefinitely.
+    -ExecutionTimeLimit (New-TimeSpan -Hours 0) `
     -RestartCount 3 `
     -RestartInterval (New-TimeSpan -Minutes 1) `
     -StartWhenAvailable
