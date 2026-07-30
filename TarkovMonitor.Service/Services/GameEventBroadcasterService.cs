@@ -153,6 +153,9 @@ public class GameEventBroadcasterService : TarkovMonitorService.TarkovMonitorSer
             Broadcast("RaidStarted", RaidInfoData(args));
         };
 
+        _gameWatcher.RaidStopping += (_, _) =>
+            Broadcast("RaidStopping", new());
+
         _gameWatcher.RaidExited += (_, args) =>
         {
             if (args == null) return;

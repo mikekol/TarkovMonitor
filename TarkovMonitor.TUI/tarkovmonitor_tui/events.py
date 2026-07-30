@@ -13,6 +13,7 @@ log = logging.getLogger(__name__)
 
 EVENT_KEYS: list[str] = [
     "raid_starting",
+    "raid_stopping",
     "raid_ended",
     "match_found",
     "runthrough_over",
@@ -25,6 +26,7 @@ EVENT_KEYS: list[str] = [
 
 EVENT_LABELS: dict[str, str] = {
     "raid_starting": "Raid Starting",
+    "raid_stopping": "Raid Stopping",
     "raid_ended": "Raid Ended",
     "match_found": "Match Found",
     "runthrough_over": "Runthrough Over",

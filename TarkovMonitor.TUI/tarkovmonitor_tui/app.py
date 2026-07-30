@@ -67,6 +67,7 @@ def save_settings(settings: dict) -> None:
 EVENT_CATEGORIES = {
     "RaidStarting": ("raid", "raid_starting"),
     "RaidStarted": ("raid", None),
+    "RaidStopping": ("raid", "raid_stopping"),
     "RaidEnded": ("raid", None),
     "RaidExited": ("raid", None),
     "MapLoading": ("raid", None),
@@ -542,6 +543,7 @@ class TarkovMonitorApp(App):
     def _wire_events(self) -> None:
         self._client.on("RaidStarting", self._on_raid_starting)
         self._client.on("RaidStarted", self._on_raid_started)
+        self._client.on("RaidStopping", self._on_raid_stopping)
         self._client.on("RaidEnded", self._on_raid_ended)
         self._client.on("RaidExited", self._on_raid_exited)
         self._client.on("MatchFound", self._on_match_found)
@@ -578,6 +580,10 @@ class TarkovMonitorApp(App):
                 "raid",
             )
         self._update_raid_info(info)
+
+    def _on_raid_stopping(self, event_type: str, data: dict) -> None:
+        self._run_event("raid_stopping")
+        self._log_message("Raid stopping", "raid")
 
     def _on_raid_ended(self, event_type: str, data: dict) -> None:
         info = GameEventClient.parse_raid_info(data)

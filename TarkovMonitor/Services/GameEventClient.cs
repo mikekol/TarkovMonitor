@@ -22,6 +22,7 @@ public class GameEventClient : IAsyncDisposable
     // Raid events
     public event EventHandler<RaidInfoEventArgs>? RaidStarting;
     public event EventHandler<RaidInfoEventArgs>? RaidStarted;
+    public event EventHandler? RaidStopping;
     public event EventHandler<RaidExitedEventArgs>? RaidExited;
     public event EventHandler<RaidInfoEventArgs>? RaidEnded;
     public event EventHandler<RaidInfoEventArgs>? ExitedPostRaidMenus;
@@ -112,6 +113,7 @@ public class GameEventClient : IAsyncDisposable
         {
             case "RaidStarting":        RaidStarting?.Invoke(this, BuildRaidInfoArgs(d)); break;
             case "RaidStarted":         RaidStarted?.Invoke(this, BuildRaidInfoArgs(d)); break;
+            case "RaidStopping":        RaidStopping?.Invoke(this, EventArgs.Empty); break;
             case "RaidEnded":           RaidEnded?.Invoke(this, BuildRaidInfoArgs(d)); break;
             case "ExitedPostRaidMenus": ExitedPostRaidMenus?.Invoke(this, BuildRaidInfoArgs(d)); break;
             case "MapLoading":          MapLoading?.Invoke(this, BuildRaidInfoArgs(d)); break;
