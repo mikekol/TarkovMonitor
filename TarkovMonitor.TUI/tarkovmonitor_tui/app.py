@@ -6,6 +6,8 @@ import asyncio
 import json
 import logging
 import os
+import subprocess
+import threading
 import time
 from datetime import datetime
 from pathlib import Path
@@ -16,6 +18,7 @@ from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical, VerticalScroll
 from textual.css.query import NoMatches
 from textual.reactive import reactive
+from textual.screen import ModalScreen
 from textual.widgets import (
     Button,
     Checkbox,
@@ -37,7 +40,7 @@ from .grpc_client import GameEventClient, RaidType
 from .manager_api import ManagerApiClient
 from .screenshots import ScreenshotWatcher, get_screenshots_path, parse_screenshot
 from .socket_client import TarkovSocketClient
-from .sounds import SOUND_EVENTS, SOUND_LABELS, SoundManager
+from .events import EVENT_KEYS, EVENT_LABELS, EventManager
 from .tarkov_dev import TarkovDevClient
 from .tarkov_tracker import TarkovTrackerClient
 
@@ -97,6 +100,150 @@ CATEGORY_STYLES = {
 }
 
 
+class CommandDialog(ModalScreen):
+    """Modal dialog for configuring a per-event shell command."""
+
+    DEFAULT_CSS = """
+    CommandDialog {
+        align: center middle;
+    }
+    #dlg-frame {
+        width: 70;
+        height: auto;
+        background: $surface;
+        border: solid $primary;
+        padding: 1 2;
+    }
+    #dlg-frame Label {
+        margin-bottom: 1;
+    }
+    #dlg-input {
+        margin-bottom: 1;
+    }
+    #dlg-verbose {
+        margin-bottom: 1;
+    }
+    #dlg-error {
+        color: $error;
+        height: 1;
+        display: none;
+    }
+    #dlg-error.visible {
+        display: block;
+    }
+    #dlg-output {
+        height: 6;
+        border: solid $primary-darken-2;
+        margin-top: 1;
+        display: none;
+    }
+    #dlg-output.visible {
+        display: block;
+    }
+    #dlg-buttons {
+        height: 3;
+        align-horizontal: right;
+        margin-top: 1;
+    }
+    #dlg-buttons Button {
+        margin-left: 1;
+    }
+    """
+
+    def __init__(self, label: str, command: str, verbose: bool) -> None:
+        super().__init__()
+        self._label = label
+        self._command = command
+        self._verbose = verbose
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="dlg-frame"):
+            yield Label(f"Command — {self._label}")
+            yield Input(
+                value=self._command,
+                id="dlg-input",
+                placeholder="Shell command to run when this event fires",
+            )
+            yield Checkbox(
+                "Show all output (verbose)",
+                value=self._verbose,
+                id="dlg-verbose",
+            )
+            yield Static("", id="dlg-error")
+            yield RichLog(id="dlg-output", highlight=True, markup=True, wrap=True)
+            with Horizontal(id="dlg-buttons"):
+                yield Button("Cancel", id="dlg-cancel", variant="default")
+                yield Button("Clear", id="dlg-clear", variant="error")
+                yield Button("Test", id="dlg-test", variant="warning")
+                yield Button("OK", id="dlg-ok", variant="primary")
+
+    @on(Button.Pressed, "#dlg-ok")
+    def _ok(self) -> None:
+        cmd = self.query_one("#dlg-input", Input).value.strip()
+        if not cmd:
+            self._show_error("Command cannot be empty.")
+            return
+        verbose = self.query_one("#dlg-verbose", Checkbox).value
+        self.dismiss((cmd, verbose))
+
+    @on(Button.Pressed, "#dlg-cancel")
+    def _cancel(self) -> None:
+        self.dismiss(None)
+
+    @on(Button.Pressed, "#dlg-clear")
+    def _clear(self) -> None:
+        self.dismiss(("", False))
+
+    @on(Button.Pressed, "#dlg-test")
+    def _test(self) -> None:
+        cmd = self.query_one("#dlg-input", Input).value.strip()
+        if not cmd:
+            self._show_error("Command cannot be empty.")
+            return
+        self._clear_error()
+        output = self.query_one("#dlg-output", RichLog)
+        output.add_class("visible")
+        output.clear()
+        output.write("[dim]Running…[/dim]")
+
+        def run() -> None:
+            try:
+                result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+
+                def update() -> None:
+                    output.clear()
+                    if result.stdout.strip():
+                        output.write(result.stdout.strip())
+                    if result.stderr.strip():
+                        output.write(f"[red]stderr: {result.stderr.strip()}[/red]")
+                    if result.returncode != 0:
+                        output.write(f"[red]exit code {result.returncode}[/red]")
+                    elif not result.stdout.strip() and not result.stderr.strip():
+                        output.write("[green]completed (no output)[/green]")
+
+                self.app.call_from_thread(update)
+            except Exception as exc:
+                self.app.call_from_thread(output.write, f"[red]failed to launch: {exc}[/red]")
+
+        threading.Thread(target=run, daemon=True).start()
+
+    @on(Input.Submitted)
+    def _input_submitted(self) -> None:
+        self._ok()
+
+    def on_key(self, event) -> None:
+        if event.key == "escape":
+            self.dismiss(None)
+
+    def _show_error(self, msg: str) -> None:
+        err = self.query_one("#dlg-error", Static)
+        err.update(msg)
+        err.add_class("visible")
+
+    def _clear_error(self) -> None:
+        self.query_one("#dlg-error", Static).remove_class("visible")
+
+
 class TarkovMonitorApp(App):
     """The main TUI application."""
 
@@ -136,23 +283,33 @@ class TarkovMonitorApp(App):
     .setting-input {
         width: 1fr;
     }
-    #sound-list {
+    #event-list {
         height: 1fr;
         padding: 1;
     }
-    .sound-row {
+    .event-row {
         height: 3;
         padding: 0 1;
     }
-    .sound-name {
+    .event-name {
         width: 25;
         padding-top: 1;
     }
-    .sound-toggle {
+    .event-toggle {
         width: 10;
     }
-    .sound-test {
-        width: 12;
+    .event-command {
+        width: 14;
+    }
+    .event-cmdtext {
+        width: 1fr;
+        padding-top: 1;
+        padding-left: 1;
+        color: $text-muted;
+        overflow: hidden;
+    }
+    .event-test {
+        width: 10;
     }
     #raid-info {
         dock: bottom;
@@ -175,7 +332,7 @@ class TarkovMonitorApp(App):
         Binding("q", "quit", "Quit"),
         Binding("d", "show_tab('dashboard')", "Dashboard", show=True),
         Binding("s", "show_tab('settings')", "Settings", show=True),
-        Binding("n", "show_tab('sounds')", "Sounds", show=True),
+        Binding("n", "show_tab('events')", "Events", show=True),
     ]
 
     connection_status = reactive("Disconnected")
@@ -187,7 +344,7 @@ class TarkovMonitorApp(App):
         self._server_address = server_address
         self._client = GameEventClient(server_address)
         self._tarkov_dev = TarkovDevClient()
-        self._sound_mgr = SoundManager()
+        self._event_mgr = EventManager()
         self._manager_api = ManagerApiClient()
         self._tt_client = TarkovTrackerClient()
         self._settings = load_settings()
@@ -306,20 +463,31 @@ class TarkovMonitorApp(App):
                         )
                     yield Button("Save & Push to Service", id="btn-save-settings", variant="primary")
                     yield Button("Reconnect", id="btn-reconnect", variant="default")
-            with TabPane("Sounds", id="sounds"):
-                with VerticalScroll(id="sound-list"):
-                    for key in SOUND_EVENTS:
-                        with Horizontal(classes="sound-row"):
-                            yield Label(SOUND_LABELS[key], classes="sound-name")
+            with TabPane("Events", id="events"):
+                with VerticalScroll(id="event-list"):
+                    for key in EVENT_KEYS:
+                        with Horizontal(classes="event-row"):
+                            yield Label(EVENT_LABELS[key], classes="event-name")
                             yield Switch(
-                                value=self._sound_mgr.is_enabled(key),
-                                id=f"sound-{key}",
-                                classes="sound-toggle",
+                                value=self._event_mgr.is_enabled(key),
+                                id=f"event-{key}",
+                                classes="event-toggle",
+                            )
+                            yield Button(
+                                "Command",
+                                id=f"cmd-{key}",
+                                classes="event-command",
+                                variant="default",
+                            )
+                            yield Label(
+                                self._event_mgr.get_command(key),
+                                id=f"cmdtext-{key}",
+                                classes="event-cmdtext",
                             )
                             yield Button(
                                 "Test",
                                 id=f"test-{key}",
-                                classes="sound-test",
+                                classes="event-test",
                                 variant="default",
                             )
         yield Footer()
@@ -391,9 +559,9 @@ class TarkovMonitorApp(App):
         self._client.on("PlayerPosition", self._on_player_position)
 
     def _on_raid_starting(self, event_type: str, data: dict) -> None:
-        self._sound_mgr.play("raid_starting")
+        self._run_event("raid_starting")
         if self._settings.get("air_filter_installed"):
-            self._sound_mgr.play("air_filter_on")
+            self._run_event("air_filter_on")
         self._log_message("Raid starting...", "raid")
 
     def _on_raid_started(self, event_type: str, data: dict) -> None:
@@ -415,13 +583,14 @@ class TarkovMonitorApp(App):
         info = GameEventClient.parse_raid_info(data)
         self.in_raid = False
         map_name = self._resolve_map_name(info.map)
+        self._run_event("raid_ended")
         self._log_message(f"Ended {map_name} raid", "raid")
         self._current_raid_map = ""
         self._update_raid_info(None)
         self._tarkov_dev.record_activity()
         self._start_scav_countdown()
         if self._settings.get("air_filter_installed"):
-            self._sound_mgr.play("air_filter_off")
+            self._run_event("air_filter_off")
 
     def _on_raid_exited(self, event_type: str, data: dict) -> None:
         self.in_raid = False
@@ -432,11 +601,11 @@ class TarkovMonitorApp(App):
         self._tarkov_dev.record_activity()
         self._start_scav_countdown()
         if self._settings.get("air_filter_installed"):
-            self._sound_mgr.play("air_filter_off")
+            self._run_event("air_filter_off")
 
     def _on_match_found(self, event_type: str, data: dict) -> None:
         info = GameEventClient.parse_raid_info(data)
-        self._sound_mgr.play("match_found")
+        self._run_event("match_found")
         map_name = self._resolve_map_name(info.map)
         self._log_message(
             f"Match found on {map_name} after {info.queue_time:.0f}s",
@@ -459,7 +628,7 @@ class TarkovMonitorApp(App):
             if t.id in self._failed_task_ids and t.restartable
         ]
         if restartable_failed:
-            self._sound_mgr.play("restart_failed_tasks")
+            self._run_event("restart_failed_tasks")
             for t in restartable_failed:
                 link = f"[link={t.wiki_link}]{t.name}[/link]" if t.wiki_link else t.name
                 self._log_message(f"Reminder: restart failed task — {link}", "quest")
@@ -595,6 +764,15 @@ class TarkovMonitorApp(App):
         style = CATEGORY_STYLES.get(category, "white")
         log_widget.write(f"[dim]{ts}[/dim] [{style}]{text}[/{style}]")
 
+    def _run_event(self, key: str, force_verbose: bool = False) -> None:
+        main_thread_id = threading.get_ident()
+        def on_output(msg: str) -> None:
+            if threading.get_ident() == main_thread_id:
+                self._log_message(msg, "system")
+            else:
+                self.call_from_thread(self._log_message, msg, "system")
+        self._event_mgr.run(key, on_output=on_output, force_verbose=force_verbose)
+
     def _update_status_bar(self) -> None:
         try:
             bar = self.query_one("#status-bar", Static)
@@ -664,7 +842,7 @@ class TarkovMonitorApp(App):
         remaining = self._scav_available_at - time.monotonic()
         if remaining <= 0:
             self._scav_available_at = None
-            self._sound_mgr.play("scav_available")
+            self._run_event("scav_available")
             self._log_message("Scav available!", "info")
         self._update_status_bar()
 
@@ -787,11 +965,11 @@ class TarkovMonitorApp(App):
         self.connect_to_service()
 
     @on(Switch.Changed)
-    def on_sound_toggle(self, event: Switch.Changed) -> None:
+    def on_event_toggle(self, event: Switch.Changed) -> None:
         widget_id = event.switch.id or ""
-        if widget_id.startswith("sound-"):
+        if widget_id.startswith("event-"):
             key = widget_id[6:]
-            self._sound_mgr.set_enabled(key, event.value)
+            self._event_mgr.set_enabled(key, event.value)
 
     @on(Button.Pressed)
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -801,9 +979,26 @@ class TarkovMonitorApp(App):
                 asyncio.create_task(self._manager_api.post_goons_sighting(self._current_raid_map))
                 self._log_message(f"Goons sighting reported for {self._resolve_map_name(self._current_raid_map)}", "info")
             return
+        if btn_id.startswith("cmd-"):
+            key = btn_id[4:]
+            self._open_command_dialog(key)
+            return
         if btn_id.startswith("test-"):
             key = btn_id[5:]
-            self._sound_mgr.play(key)
+            self._run_event(key, force_verbose=True)
+
+    def _open_command_dialog(self, key: str) -> None:
+        label = EVENT_LABELS.get(key, key)
+        cmd = self._event_mgr.get_command(key)
+        verbose = self._event_mgr.is_verbose(key)
+
+        def on_close(result: tuple[str, bool] | None) -> None:
+            if result is not None:
+                command, verb = result
+                self._event_mgr.set_command(key, command, verb)
+                self.query_one(f"#cmdtext-{key}", Label).update(command)
+
+        self.push_screen(CommandDialog(label, cmd, verbose), on_close)
 
     def action_show_tab(self, tab_id: str) -> None:
         tc = self.query_one(TabbedContent)
