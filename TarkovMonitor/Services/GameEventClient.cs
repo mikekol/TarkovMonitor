@@ -244,9 +244,10 @@ public class GameEventClient : IAsyncDisposable
         try { screenshots = JsonSerializer.Deserialize<List<string>>(d.GetValueOrDefault("screenshotsJson", "[]")) ?? new(); }
         catch { screenshots = new(); }
 
+        var mapNameId = d.GetValueOrDefault("map", "");
         var raidInfo = new RaidInfo
         {
-            Map = d.GetValueOrDefault("map", ""),
+            Map = TarkovDev.Maps.FirstOrDefault(m => m.nameId == mapNameId),
             RaidId = d.GetValueOrDefault("raidId", ""),
             Reconnected = bool.TryParse(d.GetValueOrDefault("reconnected", "false"), out var rc) && rc,
             QueueTime = float.TryParse(d.GetValueOrDefault("queueTime", "0"),
@@ -263,9 +264,10 @@ public class GameEventClient : IAsyncDisposable
     private static PlayerPositionEventArgs BuildPlayerPositionArgs(IReadOnlyDictionary<string, string> d)
     {
         var profile = BuildProfile(d);
+        var posMapNameId = d.GetValueOrDefault("map", "");
         var raidInfo = new RaidInfo
         {
-            Map = d.GetValueOrDefault("map", ""),
+            Map = TarkovDev.Maps.FirstOrDefault(m => m.nameId == posMapNameId),
             RaidId = d.GetValueOrDefault("raidId", ""),
             Profile = profile
         };

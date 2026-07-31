@@ -200,7 +200,7 @@ namespace TarkovMonitor
             }
         }
 
-        public static async Task NavigateToMap(TarkovDev.Map map)
+        public static async Task NavigateToMap(Map map)
         {
             var payload = GetNavigateToMapMessage(map);
             try
@@ -215,7 +215,7 @@ namespace TarkovMonitor
 
         public static async Task SendPlayerPositionAndZoom(PlayerPositionEventArgs e)
         {
-            var map = TarkovDev.Maps.Find(m => m.nameId == e.RaidInfo.Map)?.normalizedName;
+            var map = e.RaidInfo.Map?.normalizedName;
             if (map == null && e.RaidInfo.Map != null)
             {
                 return;
@@ -255,7 +255,7 @@ namespace TarkovMonitor
             var data = new JsonObject
             {
                 ["type"] = "playerPosition",
-                ["map"] = map,
+                ["map"] = e.RaidInfo.Map.normalizedName,
                 ["position"] = new JsonObject
                 {
                     ["x"] = e.Position.X,
@@ -278,7 +278,7 @@ namespace TarkovMonitor
             };
         }
 
-        public static JsonObject GetNavigateToMapMessage(TarkovDev.Map map)
+        public static JsonObject GetNavigateToMapMessage(Map map)
         {
             return new JsonObject
             {

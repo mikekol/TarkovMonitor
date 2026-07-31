@@ -285,7 +285,7 @@ public class GameEventBroadcasterService : TarkovMonitorService.TarkovMonitorSer
                 ["z"] = args.Position.Z.ToString(CultureInfo.InvariantCulture),
                 ["rotation"] = args.Rotation.ToString(CultureInfo.InvariantCulture),
                 ["filename"] = args.Filename,
-                ["map"] = args.RaidInfo.Map,
+                ["map"] = args.RaidInfo.Map?.nameId ?? "",
                 ["raidId"] = args.RaidInfo.RaidId
             });
         };
@@ -322,7 +322,7 @@ public class GameEventBroadcasterService : TarkovMonitorService.TarkovMonitorSer
     private static Dictionary<string, string> RaidInfoData(RaidInfoEventArgs args)
     {
         var data = ProfileData(args.Profile);
-        data["map"] = args.RaidInfo.Map;
+        data["map"] = args.RaidInfo.Map?.nameId ?? "";
         data["raidId"] = args.RaidInfo.RaidId;
         data["raidType"] = args.RaidInfo.RaidType.ToString();
         data["reconnected"] = args.RaidInfo.Reconnected.ToString();

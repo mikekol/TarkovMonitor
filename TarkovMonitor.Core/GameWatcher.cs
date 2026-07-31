@@ -111,6 +111,13 @@ namespace TarkovMonitor
         /// </summary>
         public string? CustomMap { get; set; }
 
+        /// <summary>
+        /// The map list used for scene-path and nameId lookups. Populated by the caller
+        /// (UI or Service) after fetching from tarkov.dev. Defaults to empty — events that
+        /// require a map lookup are suppressed until this is populated.
+        /// </summary>
+        public List<Map> Maps { get; set; } = new();
+
         //private event EventHandler<NewLogEventArgs> NewLog;
         internal readonly Dictionary<GameLogType, LogMonitor> Monitors;
         private RaidInfo raidInfo;
@@ -279,7 +286,7 @@ namespace TarkovMonitor
                 {
                     raid = new()
                     {
-                        Map = TarkovDev.Maps.Find(m => m.nameId == CustomMap),
+                        Map = Maps.Find(m => m.nameId == CustomMap),
                     };
                 }
                 if (raid.Map == null)
@@ -510,7 +517,7 @@ namespace TarkovMonitor
                         if (scenePathMatch.Success)
                         {
                             var scenePath = scenePathMatch.Groups["scenePath"].Value;
-                            var map = TarkovDev.Maps.Find((map) => map.scenePath == scenePath);
+                            var map = Maps.Find((map) => map.scenePath == scenePath);
                             if (map != null)
                             {
                                 raidInfo.Map = map;
@@ -539,7 +546,7 @@ namespace TarkovMonitor
                         // Sufficient information is available to raise the MatchFound event
                         var mapUnknown = raidInfo.Map == null;
                         var mapNameId = Regex.Match(eventLine, "Location: (?<map>[^,]+)").Groups["map"].Value;
-                        raidInfo.Map = TarkovDev.Maps.Find(map => map.nameId == mapNameId);
+                        raidInfo.Map = Maps.Find(map => map.nameId == mapNameId);
                         raidInfo.Online = eventLine.Contains("RaidMode: Online");
                         raidInfo.RaidId = Regex.Match(eventLine, @"shortId: (?<raidId>[A-Z0-9]{6})").Groups["raidId"].Value;
                         if (Raids.ContainsKey(raidInfo.RaidId)) {
@@ -989,7 +996,7 @@ namespace TarkovMonitor
     }
     public class RaidInfo
     {
-        public TarkovDev.Map Map { get; set; }
+        public Map? Map { get; set; }
         public string RaidId { get; set; }
         public bool Online { get; set; }
         public float MapLoadTime { get; set; }

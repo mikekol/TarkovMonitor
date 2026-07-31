@@ -91,7 +91,7 @@ namespace TarkovMonitor
                     "profile_id", e.Profile.Id
                 },
                 {
-                    "map", e.RaidInfo.Map
+                    "map", e.RaidInfo.Map?.nameId ?? ""
                 },
                 {
                     "raid_type", e.RaidInfo.RaidType

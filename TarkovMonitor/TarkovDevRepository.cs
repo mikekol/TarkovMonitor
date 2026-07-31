@@ -9,13 +9,13 @@ namespace TarkovMonitor
     internal class TarkovDevRepository
     {
         public List<TarkovDev.Task> Tasks;
-        public List<TarkovDev.Map> Maps;
+        public List<Map> Maps;
         public List<TarkovDev.Item> Items;
 
         public TarkovDevRepository()
         {
             Tasks = new List<TarkovDev.Task>();
-            Maps = new List<TarkovDev.Map>();
+            Maps = new List<Map>();
             Items = new List<TarkovDev.Item>();
         }
     }

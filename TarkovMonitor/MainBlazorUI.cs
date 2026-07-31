@@ -417,9 +417,9 @@ namespace TarkovMonitor
                 if (!position.Success) return;
 
                 var raid = _currentRaidInfo;
-                if (string.IsNullOrEmpty(raid.Map) && !string.IsNullOrEmpty(Properties.Settings.Default.customMap))
-                    raid = new RaidInfo { Map = Properties.Settings.Default.customMap };
-                if (string.IsNullOrEmpty(raid.Map)) return;
+                if (raid.Map == null && !string.IsNullOrEmpty(Properties.Settings.Default.customMap))
+                    raid = new RaidInfo { Map = TarkovDev.Maps.Find(m => m.nameId == Properties.Settings.Default.customMap) };
+                if (raid.Map == null) return;
 
                 var rotation = GameWatcher.QuarternionsToYaw(
                     float.Parse(position.Groups["rx"].Value, CultureInfo.InvariantCulture),
