@@ -594,18 +594,21 @@ class TarkovMonitorApp(App):
         self._current_raid_map = ""
         self._update_raid_info(None)
         self._tarkov_dev.record_activity()
-        self._start_scav_countdown()
+        if info.raid_type == RaidType.SCAV:
+            self._start_scav_countdown()
         if self._settings.get("air_filter_installed"):
             self._run_event("air_filter_off")
 
     def _on_raid_exited(self, event_type: str, data: dict) -> None:
+        info = GameEventClient.parse_raid_info(data)
         self.in_raid = False
-        map_name = self._resolve_map_name(data.get("map", ""))
+        map_name = self._resolve_map_name(info.map)
         self._log_message(f"Exited {map_name} raid", "raid")
         self._current_raid_map = ""
         self._update_raid_info(None)
         self._tarkov_dev.record_activity()
-        self._start_scav_countdown()
+        if info.raid_type == RaidType.SCAV:
+            self._start_scav_countdown()
         if self._settings.get("air_filter_installed"):
             self._run_event("air_filter_off")
 
