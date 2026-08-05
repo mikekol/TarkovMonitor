@@ -38,7 +38,7 @@ from textual.widgets import (
 from .cooldown import calculate_scav_cooldown
 from .grpc_client import GameEventClient, RaidType
 from .manager_api import ManagerApiClient
-from .screenshots import ScreenshotWatcher, get_screenshots_path, parse_screenshot
+from .screenshots import PlayerPosition, ScreenshotWatcher, get_screenshots_path, parse_screenshot
 from .socket_client import TarkovSocketClient
 from .events import EVENT_KEYS, EVENT_LABELS, EventManager
 from .tarkov_dev import TarkovDevClient
@@ -724,9 +724,23 @@ class TarkovMonitorApp(App):
             asyncio.create_task(self._fetch_tt_profile(token, domain))
 
     def _on_player_position(self, event_type: str, data: dict) -> None:
-        x, y, z = data.get("x", "?"), data.get("y", "?"), data.get("z", "?")
-        map_name = self._resolve_map_name(data.get("map", ""))
-        self._log_message(f"Position on {map_name}: ({x}, {y}, {z})", "position")
+        try:
+            pos = PlayerPosition(
+                x=float(data.get("x", 0)),
+                y=float(data.get("y", 0)),
+                z=float(data.get("z", 0)),
+                rotation=float(data.get("rotation", 0)),
+                filename=data.get("filename", ""),
+                map_name=data.get("map", ""),
+            )
+        except (TypeError, ValueError):
+            return
+        map_name_id = data.get("map", "")
+        tarkov_map = self._tarkov_dev.find_map(map_name_id)
+        normalized = tarkov_map.normalized_name if tarkov_map else map_name_id
+        display = tarkov_map.name if tarkov_map else (map_name_id or "Unknown")
+        self._log_message(f"Position on {display}: ({pos.x:.1f}, {pos.y:.1f}, {pos.z:.1f})", "position")
+        self._relay_player_position(pos, normalized)
 
     async def _fetch_tt_profile(self, token: str, domain: str) -> None:
         progress = await self._tt_client.fetch_progress(token=token, domain=domain)
@@ -903,6 +917,9 @@ class TarkovMonitorApp(App):
             "position",
         )
 
+        self._relay_player_position(pos, normalized)
+
+    def _relay_player_position(self, pos: PlayerPosition, normalized: str) -> None:
         if self._socket_client is None:
             return
 
