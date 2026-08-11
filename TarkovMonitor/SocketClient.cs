@@ -17,6 +17,12 @@ namespace TarkovMonitor
             AutoReset = false,
             Interval = TimeSpan.FromMinutes(30).TotalMilliseconds,
         };
+        private static string _lastMapName;
+
+        public static void ResetLastMap()
+        {
+            _lastMapName = null;
+        }
 
         static SocketClient()
         {
@@ -162,27 +168,56 @@ namespace TarkovMonitor
             }
         }
 
-        public static JsonObject GetPlayerPositionMessage(PlayerPositionEventArgs e)
+        public static async Task SendPlayerPositionAndZoom(PlayerPositionEventArgs e)
+        {
+            if (e.RaidInfo.Map == null)
+            {
+                return;
+            }
+            bool mapChanged = e.RaidInfo.Map.normalizedName != _lastMapName;
+            _lastMapName = e.RaidInfo.Map.normalizedName;
+            int? viewRadius = null;
+            if (mapChanged && Properties.Settings.Default.autoZoomOnLocationUpdate)
+            {
+                viewRadius = Math.Clamp(Properties.Settings.Default.viewRadiusOnLocationUpdate, 10, 5000);
+            }
+            var message = GetPlayerPositionMessage(e, viewRadius);
+            try
+            {
+                await Send(message);
+            }
+            catch (Exception ex)
+            {
+                ExceptionThrown?.Invoke(message, new(ex, "sending player position and zoom"));
+            }
+        }
+
+        public static JsonObject GetPlayerPositionMessage(PlayerPositionEventArgs e, int? viewRadius = null)
         {
             if (e.RaidInfo.Map == null)
             {
                 throw new Exception("Map not found");
             }
+            var data = new JsonObject
+            {
+                ["type"] = "playerPosition",
+                ["map"] = e.RaidInfo.Map.normalizedName,
+                ["position"] = new JsonObject
+                {
+                    ["x"] = e.Position.X,
+                    ["y"] = e.Position.Y,
+                    ["z"] = e.Position.Z,
+                },
+                ["rotation"] = e.Rotation,
+            };
+            if (viewRadius.HasValue)
+            {
+                data["viewRadius"] = viewRadius.Value;
+            }
             return new JsonObject
             {
                 ["type"] = "command",
-                ["data"] = new JsonObject
-                {
-                    ["type"] = "playerPosition",
-                    ["map"] = e.RaidInfo.Map.normalizedName,
-                    ["position"] = new JsonObject
-                    {
-                        ["x"] = e.Position.X,
-                        ["y"] = e.Position.Y,
-                        ["z"] = e.Position.Z,
-                    },
-                    ["rotation"] = e.Rotation,
-                }
+                ["data"] = data,
             };
         }
 

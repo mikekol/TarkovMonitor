@@ -402,4 +402,13 @@
   <data name="RetrievedDataFromTarkovTracker" xml:space="preserve">
     <value>Retrieved {0} level {1} {2} progress from Tarkov Tracker</value>
   </data>
+  <data name="AutoZoomOnLocationUpdate" xml:space="preserve">
+    <value>Zoom to player on screenshot</value>
+  </data>
+  <data name="ViewRadiusOnLocationUpdate" xml:space="preserve">
+    <value>View radius (meters)</value>
+  </data>
+  <data name="ViewRadiusOnLocationUpdateHelper" xml:space="preserve">
+    <value>Area shown around your position on each new map</value>
+  </data>
 </root>

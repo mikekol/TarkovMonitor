@@ -155,6 +155,17 @@
             <div>
                 <MudSwitch @bind-Value="@AutomaticallyDeleteScreenshotsAfterRaid" Label="@LocalizationService.GetString("AutomaticallyDeleteScreenshotsAfterRaid")" Color="Color.Info" />
             </div>
+            <div>
+                <MudSwitch @bind-Value="@AutoZoomOnLocationUpdate" Label="@LocalizationService.GetString("AutoZoomOnLocationUpdate")" Color="Color.Info" />
+            </div>
+            <MudNumericField @bind-Value="@ViewRadiusOnLocationUpdate"
+                             Label="@LocalizationService.GetString("ViewRadiusOnLocationUpdate")"
+                             Min="10" Max="5000" Step="25"
+                             Disabled="@(!AutoZoomOnLocationUpdate)"
+                             Variant="Variant.Outlined"
+                             Adornment="Adornment.End" AdornmentText="m"
+                             HelperText="@LocalizationService.GetString("ViewRadiusOnLocationUpdateHelper")"
+                             Style="max-width: 200px; margin-top: 4px;" />
             <MudSelect @bind-Value="@MapOverrideSelect" T="string" Label="@LocalizationService.GetString("OfflineMap")" ShrinkLabel="true" HelperText="@LocalizationService.GetString("MapToUseForOfflineRaids")" AnchorOrigin="Origin.BottomCenter" xs="3">
                 <MudSelectItem T="string" Value="@string.Empty">@LocalizationService.GetString("None")</MudSelectItem>
                 @foreach (var map in TarkovDev.Maps)
@@ -753,6 +764,34 @@
         {
             Properties.Settings.Default.automaticallyDeleteScreenshotsAfterRaid = value;
             Properties.Settings.Default.Save();
+        }
+    }
+
+    public bool AutoZoomOnLocationUpdate
+    {
+        get
+        {
+            return Properties.Settings.Default.autoZoomOnLocationUpdate;
+        }
+        set
+        {
+            Properties.Settings.Default.autoZoomOnLocationUpdate = value;
+            Properties.Settings.Default.Save();
+            SocketClient.ResetLastMap();
+        }
+    }
+
+    public int ViewRadiusOnLocationUpdate
+    {
+        get
+        {
+            return Properties.Settings.Default.viewRadiusOnLocationUpdate;
+        }
+        set
+        {
+            Properties.Settings.Default.viewRadiusOnLocationUpdate = value;
+            Properties.Settings.Default.Save();
+            SocketClient.ResetLastMap();
         }
     }
 
