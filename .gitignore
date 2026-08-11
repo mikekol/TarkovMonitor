@@ -366,3 +366,4 @@ FodyWeavers.xsd
 secrets/
 handoff.md
 dist/
+[Tt]arkov[Mm]onitor.[Ii]nstaller/*_harvest.wxs
