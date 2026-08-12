@@ -176,8 +176,8 @@ namespace TarkovMonitor
             }
             bool mapChanged = e.RaidInfo.Map.normalizedName != _lastMapName;
             _lastMapName = e.RaidInfo.Map.normalizedName;
-            int? viewRadius = null;
-            if (mapChanged && Properties.Settings.Default.autoZoomOnLocationUpdate)
+            int? viewRadius = 0;
+            if (Properties.Settings.Default.autoZoomOnLocationUpdate && mapChanged)
             {
                 viewRadius = Math.Clamp(Properties.Settings.Default.viewRadiusOnLocationUpdate, 10, 5000);
             }
