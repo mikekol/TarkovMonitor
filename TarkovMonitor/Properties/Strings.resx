@@ -403,7 +403,7 @@
     <value>Retrieved {0} level {1} {2} progress from Tarkov Tracker</value>
   </data>
   <data name="AutoZoomOnLocationUpdate" xml:space="preserve">
-    <value>Switch to Tarkov.dev map on position update (via screenshot)</value>
+    <value>Zoom to Tarkov.dev map on position update (via screenshot)</value>
   </data>
   <data name="ViewRadiusOnLocationUpdate" xml:space="preserve">
     <value>Zoomed-in view radius (meters)</value>

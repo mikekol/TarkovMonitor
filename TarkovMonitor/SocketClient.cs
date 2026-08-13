@@ -179,7 +179,7 @@ namespace TarkovMonitor
             int? viewRadius = 0;
             if (Properties.Settings.Default.autoZoomOnLocationUpdate && mapChanged)
             {
-                viewRadius = Math.Clamp(Properties.Settings.Default.viewRadiusOnLocationUpdate, 10, 5000);
+                viewRadius = Math.Clamp(Properties.Settings.Default.viewRadiusOnLocationUpdate, 10, 700);
             }
             var message = GetPlayerPositionMessage(e, viewRadius);
             try
