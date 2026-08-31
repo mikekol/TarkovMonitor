@@ -784,21 +784,29 @@ namespace TarkovMonitor
             {
                 throw new Exception("Map not found");
             }
+
+            var data = new JsonObject
+            {
+                ["type"] = "playerPosition",
+                ["map"] = e.RaidInfo.Map.normalizedName,
+                ["position"] = new JsonObject
+                {
+                    ["x"] = e.Position.X,
+                    ["y"] = e.Position.Y,
+                    ["z"] = e.Position.Z,
+                },
+                ["rotation"] = e.Rotation
+            };
+
+            if (viewRadius.HasValue)
+            {
+                data["viewRadius"] = viewRadius.Value;
+            }   
+
             return new JsonObject
             {
                 ["type"] = "command",
-                ["data"] = new JsonObject
-                {
-                    ["type"] = "playerPosition",
-                    ["map"] = e.RaidInfo.Map.normalizedName,
-                    ["position"] = new JsonObject
-                    {
-                        ["x"] = e.Position.X,
-                        ["y"] = e.Position.Y,
-                        ["z"] = e.Position.Z,
-                    },
-                    ["rotation"] = e.Rotation,
-                }
+                ["data"] = data,
             };
         }
 

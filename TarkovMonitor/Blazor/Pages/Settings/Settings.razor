@@ -351,28 +351,25 @@
             </div>
             <div>
                 <MudSwitch @bind-Value="@NavigateMapOnPositionUpdateSwitch" Label="@LocalizationService.GetString("SwitchToTarkovDevMapOnPositionUpdate")" Color="Color.Info" />
+            </div> 
+            <div class="ml-4">
+                <MudSwitch @bind-Value="@AutoZoomOnLocationUpdate" Label="@LocalizationService.GetString("AutoZoomOnLocationUpdate")" Color="Color.Info" Disabled="@(!NavigateMapOnPositionUpdateSwitch)" />
+            </div>
+            <div class="ml-8">
+                <MudNumericField @bind-Value="@ViewRadiusOnLocationUpdate" Label="@LocalizationService.GetString("ViewRadiusOnLocationUpdate")" Min="10" Max="700" Step="25" Disabled="@(!NavigateMapOnPositionUpdateSwitch || !AutoZoomOnLocationUpdate)" Variant="Variant.Outlined" Adornment="Adornment.End" AdornmentText="m" HelperText="@LocalizationService.GetString("ViewRadiusOnLocationUpdateHelper")" Style="max-width: 200px;" />
+            </div>
+            <div>
+                <MudSelect @bind-Value="@MapOverrideSelect" T="string" Label="@LocalizationService.GetString("OfflineMap")" RelativeWidth="DropdownWidth.Adaptive" ShrinkLabel="true" HelperText="@LocalizationService.GetString("MapToUseForOfflineRaids")" AnchorOrigin="Origin.BottomLeft" PopoverFixed="false" Modal="false" MaxHeight="280" Margin="Margin.Dense" Dense="true" Class="tm-select tm-select--field" PopoverClass="tm-select-popover" ListClass="tm-select-list" xs="3">
+                    <MudSelectItem T="string" Value="@string.Empty">@LocalizationService.GetString("None")</MudSelectItem>
+                    @foreach (var map in TarkovDev.Maps)
+                    {
+                        <MudSelectItem T="string" Value="@map.nameId">@map.name</MudSelectItem>
+                    }
+                </MudSelect>
             </div>
             <div>
                 <MudSwitch @bind-Value="@AutomaticallyDeleteScreenshotsAfterRaid" Label="@LocalizationService.GetString("AutomaticallyDeleteScreenshotsAfterRaid")" Color="Color.Info" />
             </div>
-            <div>
-                <MudSwitch @bind-Value="@AutoZoomOnLocationUpdate" Label="@LocalizationService.GetString("AutoZoomOnLocationUpdate")" Color="Color.Info" />
-            </div>
-            <MudNumericField @bind-Value="@ViewRadiusOnLocationUpdate"
-                             Label="@LocalizationService.GetString("ViewRadiusOnLocationUpdate")"
-                             Min="10" Max="700" Step="25"
-                             Disabled="@(!AutoZoomOnLocationUpdate)"
-                             Variant="Variant.Outlined"
-                             Adornment="Adornment.End" AdornmentText="m"
-                             HelperText="@LocalizationService.GetString("ViewRadiusOnLocationUpdateHelper")"
-                             Style="max-width: 200px; margin-top: 4px;" />
-            <MudSelect @bind-Value="@MapOverrideSelect" T="string" Label="@LocalizationService.GetString("OfflineMap")" RelativeWidth="DropdownWidth.Adaptive" ShrinkLabel="true" HelperText="@LocalizationService.GetString("MapToUseForOfflineRaids")" AnchorOrigin="Origin.BottomLeft" PopoverFixed="false" Modal="false" MaxHeight="280" Margin="Margin.Dense" Dense="true" Class="tm-select tm-select--field" PopoverClass="tm-select-popover" ListClass="tm-select-list" xs="3">
-                <MudSelectItem T="string" Value="@string.Empty">@LocalizationService.GetString("None")</MudSelectItem>
-                @foreach (var map in TarkovDev.Maps)
-                {
-                    <MudSelectItem T="string" Value="@map.nameId">@map.name</MudSelectItem>
-                }
-            </MudSelect>
         </MudPaper>
     </MudItem>
 

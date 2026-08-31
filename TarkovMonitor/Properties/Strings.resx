@@ -204,6 +204,15 @@
   <data name="SwitchToTarkovDevMapOnPositionUpdate" xml:space="preserve">
     <value>Switch to the Tarkov.dev map when your position updates (via screenshot)</value>
   </data>
+    <data name="AutoZoomOnLocationUpdate" xml:space="preserve">
+    <value>Zoom to the Tarkov.dev map when your position updates (via screenshot)</value>
+  </data>
+  <data name="ViewRadiusOnLocationUpdate" xml:space="preserve">
+    <value>Zoomed-in view radius (meters)</value>
+  </data>
+  <data name="ViewRadiusOnLocationUpdateHelper" xml:space="preserve">
+    <value>Area shown around your position on each new map</value>
+  </data>
   <data name="AutomaticallyDeleteScreenshotsAfterRaid" xml:space="preserve">
     <value>Delete raid screenshots automatically</value>
   </data>
@@ -407,15 +416,5 @@
   </data>
   <data name="RetrievedDataFromTarkovTracker" xml:space="preserve">
     <value>Retrieved Tarkov Tracker progress for {0} (level {1}, {2}) ({3}).</value>
-  </data>
-  <data name="AutoZoomOnLocationUpdate" xml:space="preserve">
-    <value>Zoom to Tarkov.dev map on position update (via screenshot)</value>
-  </data>
-  <data name="ViewRadiusOnLocationUpdate" xml:space="preserve">
-    <value>Zoomed-in view radius (meters)</value>
-  </data>
-  <data name="ViewRadiusOnLocationUpdateHelper" xml:space="preserve">
-    <value>Area shown around your position on each new map</value>
-  </data>
-  
+  </data> 
 </root>
