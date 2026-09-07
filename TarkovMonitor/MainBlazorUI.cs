@@ -750,14 +750,20 @@ namespace TarkovMonitor
             // being shown. Reapply the state-aware color after that transition
             // so the temporary white frame is not left behind.
             BeginInvoke(new Action(ApplyWindowFrameAttributes));
-
+            System.Diagnostics.Debug.WriteLine($"OnShown {WindowState}");
             var startedUtc = DateTime.UtcNow;
             try
             {
                 if (Properties.Settings.Default.minimizeAtStartup)
                 {
-
-                    WindowState = FormWindowState.Minimized;
+                    if (Properties.Settings.Default.minimizeToTray)
+                    {
+                        messageLog.AddMessage("A rendering bug causes issues when both the 'Minimize to Tray' and 'Minimize at startup' options are selected. For this reason, minimize at startup was skipped.");
+                    }
+                    else
+                    {
+                        WindowState = FormWindowState.Minimized;
+                    }
                 }
 
                 // Let WebView2 render the startup shell before watcher and
@@ -1711,6 +1717,7 @@ namespace TarkovMonitor
 
         private void MainBlazorUI_Resize(object sender, EventArgs e)
         {
+            System.Diagnostics.Debug.WriteLine($"MainBlazorUI_Resize {WindowState}");
             WindowStateChanged?.Invoke(this, EventArgs.Empty);
             var startedUtc = DateTime.UtcNow;
             try
