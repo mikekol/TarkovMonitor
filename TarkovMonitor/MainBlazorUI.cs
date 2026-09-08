@@ -1,15 +1,16 @@
-﻿using MudBlazor.Services;
-using Microsoft.AspNetCore.Components.WebView.WindowsForms;
+﻿using Microsoft.AspNetCore.Components.WebView.WindowsForms;
 using Microsoft.Extensions.DependencyInjection;
-using System.Diagnostics;
-using Microsoft.Web.WebView2.Core;
-using TarkovMonitor.GroupLoadout;
-using System.Globalization;
-using System.ComponentModel;
-using MudBlazor;
 using Microsoft.Extensions.Localization;
-using System.Text.Json.Nodes;
+using Microsoft.Web.WebView2.Core;
+using MudBlazor;
+using MudBlazor.Services;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.InteropServices;
+using System.Security.Policy;
+using System.Text.Json.Nodes;
+using TarkovMonitor.GroupLoadout;
 
 namespace TarkovMonitor
 {
@@ -824,6 +825,27 @@ namespace TarkovMonitor
                 RecordException("Update checking could not start.", "TM-UPDATE-002", "CheckForNewVersion", ex, "UpdateCheck", "Startup");
             }
 
+            try
+            {
+                if (Properties.Settings.Default.autoLaunchTarkovDevOnLoad)
+                {
+                    if (Properties.Settings.Default.remoteId == String.Empty)
+                    {
+                        Properties.Settings.Default.remoteId = RemoteCode.Generate();
+                        Properties.Settings.Default.Save();
+                    }
+                    var psi = new ProcessStartInfo
+                    {
+                        FileName = $"https://tarkov.dev?connection={Properties.Settings.Default.remoteId}",
+                        UseShellExecute = true,
+                    };
+                    Process.Start(psi);
+                }
+            }
+            catch (Exception ex)
+            {
+                RecordException("Tarkov.dev website could not be launched.", "TM-WEBSITE-001", "Launch", ex, "UpdateCheck", "Startup");
+            }
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)

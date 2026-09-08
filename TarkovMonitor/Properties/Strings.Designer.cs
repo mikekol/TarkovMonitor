@@ -367,6 +367,15 @@ namespace TarkovMonitor.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Launch and connect tarkov.dev website when Tarkov Monitor starts.
+        /// </summary>
+        internal static string LaunchTarkovDevWebsiteOnLoad {
+            get {
+                return ResourceManager.GetString("LaunchTarkovDevWebsiteOnLoad", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Logs folder.
         /// </summary>
         internal static string LogsFolder {
