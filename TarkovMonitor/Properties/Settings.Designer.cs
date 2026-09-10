@@ -12,7 +12,7 @@ namespace TarkovMonitor.Properties {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "17.14.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "18.9.0.0")]
     internal sealed partial class Settings : global::System.Configuration.ApplicationSettingsBase {
         
         private static Settings defaultInstance = ((Settings)(global::System.Configuration.ApplicationSettingsBase.Synchronized(new Settings())));
@@ -286,7 +286,7 @@ namespace TarkovMonitor.Properties {
                 this["tarkovTrackerTokens"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("{}")]
@@ -298,7 +298,7 @@ namespace TarkovMonitor.Properties {
                 this["tarkovTrackerModeTokens"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("{}")]
@@ -310,7 +310,7 @@ namespace TarkovMonitor.Properties {
                 this["tarkovTrackerVerifiedModeTokenHashes"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("{\"version\":6,\"keys\":[],\"accounts\":[],\"profiles\":[]}")]
@@ -322,7 +322,7 @@ namespace TarkovMonitor.Properties {
                 this["tarkovTrackerOrgTokenStore"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("")]
@@ -394,7 +394,7 @@ namespace TarkovMonitor.Properties {
                 this["pauseMediaOnRaid"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
@@ -406,7 +406,7 @@ namespace TarkovMonitor.Properties {
                 this["floatingTimerPanelEnabled"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
@@ -418,7 +418,7 @@ namespace TarkovMonitor.Properties {
                 this["floatingTimerPanelShowTimeInRaid"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
@@ -452,6 +452,18 @@ namespace TarkovMonitor.Properties {
             }
             set {
                 this["viewRadiusOnLocationUpdate"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool autoLaunchTarkovDevOnLoad {
+            get {
+                return ((bool)(this["autoLaunchTarkovDevOnLoad"]));
+            }
+            set {
+                this["autoLaunchTarkovDevOnLoad"] = value;
             }
         }
     }

@@ -1,5 +1,8 @@
 ﻿@page "/settings"
+@using System;
 @using System.Diagnostics
+@using System.Security.Cryptography;
+@using System.Text;
 @using NAudio.Wave
 @using System.Text.RegularExpressions;
 @inject GameWatcher eft
@@ -344,8 +347,22 @@
 
     <MudItem xs="12" lg="6" xl="4">
         <MudPaper Class="app-surface pa-2 ma-2 mx-4" Elevation="3">
-            <MudText Typo="Typo.h6" Class="d-flex align-center"><MudIcon Icon="@Icons.Material.Filled.SettingsRemote" Class="mr-2" /><span class="tm-card-heading-text">@TarkovDevWebsiteRemoteTitle</span></MudText>
+            <MudStack Row="true"
+                Justify="Justify.SpaceBetween"
+                AlignItems="AlignItems.Center"
+                Class="w-100">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                    <MudText Typo="Typo.h6" Class="d-flex align-center">
+                        <MudIcon Icon="@Icons.Material.Filled.SettingsRemote" Class="mr-2" />
+                        <span class="tm-card-heading-text">@TarkovDevWebsiteRemoteTitle</span>
+                    </MudText>
+                </MudStack>
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Info" StartIcon="@Icons.Material.Filled.OpenInBrowser" Class="align-right" OnClick="ConnectToWebsiteClick">Connect</MudButton>
+            </MudStack>
             <MudTextField @bind-Value="@RemoteID" MaxLength="4" Label="@LocalizationService.GetString("RemoteID")" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.ContentPaste" OnAdornmentClick="PasteRemoteClick" Class="tm-input tm-input--full"></MudTextField>
+            <div>
+                <MudSwitch @bind-Value="@LaunchTarkovDevWebsiteOnStartSwitch" Label="@LocalizationService.GetString("LaunchTarkovDevWebsiteOnLoad")" Color="Color.Info" />
+            </div>
             <div>
                 <MudSwitch @bind-Value="@NavigateMapSwitch" Label="@LocalizationService.GetString("SwitchToTarkovDevMapOnRaidLoad")" Color="Color.Info" />
             </div>
@@ -395,6 +412,16 @@
         </MudPaper>
     </MudItem>
 
+    <MudItem xs="12" lg="6" xl="4">
+        <MudPaper Class="app-surface pa-2 ma-2 mx-4" Elevation="3">
+            <MudText Typo="Typo.h6" Class="d-flex align-center"><MudIcon Icon="@Icons.Material.Filled.Update" Class="mr-2" /><span class="tm-card-heading-text">Updates</span></MudText>
+            <MudText>Installed version @CurrentVersion</MudText>
+            <div>
+                <MudButton @onclick="CheckForUpdates" Variant="Variant.Text" Class="tm-action-link" Disabled="@checkingForUpdates">Check for updates</MudButton>
+            </div>
+        </MudPaper>
+    </MudItem>
+
 </MudGrid>
 
 @code {
@@ -411,7 +438,31 @@
     private static bool pendingDrawerExpanded;
     private static bool boundDrawerExpanded;
     private bool scanningOrgProfiles;
+    private bool checkingForUpdates;
     private static readonly HashSet<string> expandedAccountIds = new(StringComparer.Ordinal);
+
+    private static string CurrentVersion => System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "";
+
+    private async Task CheckForUpdates()
+    {
+        checkingForUpdates = true;
+        StateHasChanged();
+        try
+        {
+            // A newer release announces itself through the notification list,
+            // where it can be installed. Only the "nothing to do" answer has to
+            // be reported from here.
+            if (await WindowHost.CheckForUpdates() == UpdateCheckResult.UpToDate)
+            {
+                messageLog.AddMessage($"Tarkov Monitor {CurrentVersion} is the latest version.", "update");
+            }
+        }
+        finally
+        {
+            checkingForUpdates = false;
+            StateHasChanged();
+        }
+    }
 
     private sealed record OrgAccountGroup(
         string AccountId,
@@ -549,7 +600,7 @@
             if (Properties.Settings.Default.language != value)
             {
                 LocalizationService.SetCulture(value);
-                    messageLog.AddMessage("Restart Tarkov Monitor to finish applying the language change.", "warning");
+                messageLog.AddMessage("Restart Tarkov Monitor to finish applying the language change.", "warning");
                 //Properties.Settings.Default.language = value; // handled by LocalizationService.SetCulture
                 //Properties.Settings.Default.Save();
                 //InvokeAsync(StateHasChanged); // should be unnecessary since we're handling the OnLanguageChanged event
@@ -1498,6 +1549,26 @@
         set
         {
             Properties.Settings.Default.remoteId = value;
+            Properties.Settings.Default.Save();
+        }
+    }
+    void ConnectToWebsiteClick()
+    {
+        if (RemoteID == String.Empty)
+        {
+            RemoteID = RemoteCode.Generate();
+        }
+        OpenURL($"https://tarkov.dev?connection={RemoteID}");
+    }
+    public bool LaunchTarkovDevWebsiteOnStartSwitch
+    {
+        get
+        {
+            return Properties.Settings.Default.autoLaunchTarkovDevOnLoad;
+        }
+        set
+        {
+            Properties.Settings.Default.autoLaunchTarkovDevOnLoad = value;
             Properties.Settings.Default.Save();
         }
     }

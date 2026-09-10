@@ -1,15 +1,16 @@
-﻿using MudBlazor.Services;
-using Microsoft.AspNetCore.Components.WebView.WindowsForms;
+﻿using Microsoft.AspNetCore.Components.WebView.WindowsForms;
 using Microsoft.Extensions.DependencyInjection;
-using System.Diagnostics;
-using Microsoft.Web.WebView2.Core;
-using TarkovMonitor.GroupLoadout;
-using System.Globalization;
-using System.ComponentModel;
-using MudBlazor;
 using Microsoft.Extensions.Localization;
-using System.Text.Json.Nodes;
+using Microsoft.Web.WebView2.Core;
+using MudBlazor;
+using MudBlazor.Services;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.InteropServices;
+using System.Security.Policy;
+using System.Text.Json.Nodes;
+using TarkovMonitor.GroupLoadout;
 
 namespace TarkovMonitor
 {
@@ -71,6 +72,7 @@ namespace TarkovMonitor
         private readonly LogRepository logRepository;
         private readonly GroupManager groupManager;
         private readonly TimersManager timersManager;
+        private readonly Updating.UpdateCoordinator updateCoordinator;
         private readonly System.Timers.Timer runthroughTimer;
         private readonly System.Timers.Timer scavCooldownTimer;
         private LocalizationService localizationService;
@@ -118,6 +120,10 @@ namespace TarkovMonitor
             diagnostics = diagnosticsService ?? new DiagnosticsService();
             messageLog = new MessageLog(diagnostics);
             messageLog.AddMessage($"Tarkov Monitor v{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}");
+
+            // Offers new releases as an in-place install rather than only a
+            // link to the download page.
+            updateCoordinator = new Updating.UpdateCoordinator(messageLog, () => BeginInvoke(new Action(Application.Exit)));
 
             // Singleton log repository to record, display, and analyze logs for TarkovMonitor
             logRepository = new LogRepository();
@@ -750,14 +756,20 @@ namespace TarkovMonitor
             // being shown. Reapply the state-aware color after that transition
             // so the temporary white frame is not left behind.
             BeginInvoke(new Action(ApplyWindowFrameAttributes));
-
+            System.Diagnostics.Debug.WriteLine($"OnShown {WindowState}");
             var startedUtc = DateTime.UtcNow;
             try
             {
                 if (Properties.Settings.Default.minimizeAtStartup)
                 {
-
-                    WindowState = FormWindowState.Minimized;
+                    if (Properties.Settings.Default.minimizeToTray)
+                    {
+                        messageLog.AddMessage("A rendering bug causes issues when both the 'Minimize to Tray' and 'Minimize at startup' options are selected. For this reason, minimize at startup was skipped.");
+                    }
+                    else
+                    {
+                        WindowState = FormWindowState.Minimized;
+                    }
                 }
 
                 // Let WebView2 render the startup shell before watcher and
@@ -803,6 +815,9 @@ namespace TarkovMonitor
 
             try
             {
+                // A completed update leaves its download behind, and the
+                // launcher that applied it has exited by now.
+                updateCoordinator.CleanStaleStaging();
                 UpdateCheck.CheckForNewVersion();
             }
             catch (Exception ex)
@@ -810,6 +825,27 @@ namespace TarkovMonitor
                 RecordException("Update checking could not start.", "TM-UPDATE-002", "CheckForNewVersion", ex, "UpdateCheck", "Startup");
             }
 
+            try
+            {
+                if (Properties.Settings.Default.autoLaunchTarkovDevOnLoad)
+                {
+                    if (Properties.Settings.Default.remoteId == String.Empty)
+                    {
+                        Properties.Settings.Default.remoteId = RemoteCode.Generate();
+                        Properties.Settings.Default.Save();
+                    }
+                    var psi = new ProcessStartInfo
+                    {
+                        FileName = $"https://tarkov.dev?connection={Properties.Settings.Default.remoteId}",
+                        UseShellExecute = true,
+                    };
+                    Process.Start(psi);
+                }
+            }
+            catch (Exception ex)
+            {
+                RecordException("Tarkov.dev website could not be launched.", "TM-WEBSITE-001", "Launch", ex, "UpdateCheck", "Startup");
+            }
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
@@ -869,7 +905,16 @@ namespace TarkovMonitor
 
         private void UpdateCheck_NewVersion(object? sender, NewVersionEventArgs e)
         {
-            messageLog.AddMessage($"A new Tarkov Monitor version is available ({e.Version}). Click to open the download page, and update before reporting a bug.", null, e.Uri.ToString());
+            updateCoordinator.Announce(e);
+        }
+
+        /// <summary>
+        /// Runs the update check on demand from the settings page. A new
+        /// version is reported through the usual notification.
+        /// </summary>
+        public async Task<UpdateCheckResult> CheckForUpdates()
+        {
+            return await UpdateCheck.CheckForNewVersionAsync();
         }
 
         private async void Eft_MapLoading(object? sender, EventArgs e)
@@ -1712,6 +1757,7 @@ namespace TarkovMonitor
 
         private void MainBlazorUI_Resize(object sender, EventArgs e)
         {
+            System.Diagnostics.Debug.WriteLine($"MainBlazorUI_Resize {WindowState}");
             WindowStateChanged?.Invoke(this, EventArgs.Empty);
             var startedUtc = DateTime.UtcNow;
             try

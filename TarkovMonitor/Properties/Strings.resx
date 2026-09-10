@@ -324,9 +324,9 @@
   <data name="CurrentProfile" xml:space="preserve">
     <value>Active profile</value>
   </data>
-    <data name="LastProfileLoaded" xml:space="preserve">
-      <value>Last/Current Profile</value>
-    </data>
+  <data name="LastProfileLoaded" xml:space="preserve">
+    <value>Last/Current Profile</value>
+  </data>
   <data name="NoActiveEftSessionRecognized" xml:space="preserve">
     <value>No active session recognized, please launch Escape From Tarkov.</value>
   </data>
@@ -416,5 +416,8 @@
   </data>
   <data name="RetrievedDataFromTarkovTracker" xml:space="preserve">
     <value>Retrieved Tarkov Tracker progress for {0} (level {1}, {2}) ({3}).</value>
-  </data> 
+  </data>
+  <data name="LaunchTarkovDevWebsiteOnLoad" xml:space="preserve">
+    <value>Launch and connect tarkov.dev website when Tarkov Monitor starts</value>
+  </data>
 </root>
