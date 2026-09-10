@@ -88,6 +88,15 @@ namespace TarkovMonitor.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Launch tarkv.dev website automatically.
+        /// </summary>
+        internal static string AutoLaunchTarkovDevWebsite {
+            get {
+                return ResourceManager.GetString("AutoLaunchTarkovDevWebsite", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Delete raid screenshots automatically.
         /// </summary>
         internal static string AutomaticallyDeleteScreenshotsAfterRaid {
@@ -129,6 +138,15 @@ namespace TarkovMonitor.Properties {
         internal static string ClearData {
             get {
                 return ResourceManager.GetString("ClearData", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Connect.
+        /// </summary>
+        internal static string Connect {
+            get {
+                return ResourceManager.GetString("Connect", resourceCulture);
             }
         }
         
@@ -363,15 +381,6 @@ namespace TarkovMonitor.Properties {
         internal static string LastProfileLoaded {
             get {
                 return ResourceManager.GetString("LastProfileLoaded", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Launch and connect tarkov.dev website when Tarkov Monitor starts.
-        /// </summary>
-        internal static string LaunchTarkovDevWebsiteOnLoad {
-            get {
-                return ResourceManager.GetString("LaunchTarkovDevWebsiteOnLoad", resourceCulture);
             }
         }
         
@@ -921,6 +930,15 @@ namespace TarkovMonitor.Properties {
         internal static string WarningMessage {
             get {
                 return ResourceManager.GetString("WarningMessage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The website is already connected.
+        /// </summary>
+        internal static string WebsiteAlreadyConnectedMsg {
+            get {
+                return ResourceManager.GetString("WebsiteAlreadyConnectedMsg", resourceCulture);
             }
         }
         

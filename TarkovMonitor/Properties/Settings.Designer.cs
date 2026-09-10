@@ -434,12 +434,12 @@ namespace TarkovMonitor.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool autoLaunchTarkovDevOnLoad {
+        public bool autoLaunchTarkovDevWebsite {
             get {
-                return ((bool)(this["autoLaunchTarkovDevOnLoad"]));
+                return ((bool)(this["autoLaunchTarkovDevWebsite"]));
             }
             set {
-                this["autoLaunchTarkovDevOnLoad"] = value;
+                this["autoLaunchTarkovDevWebsite"] = value;
             }
         }
     }

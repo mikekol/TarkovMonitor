@@ -2,6 +2,7 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Timers;
 
 namespace TarkovMonitor
 {
@@ -11,6 +12,7 @@ namespace TarkovMonitor
         // notified when a user-required send cannot complete, not when an
         // otherwise recoverable receive loop loses its peer.
         public static event EventHandler<SocketConnectionIncidentEventArgs>? ConnectionInterrupted;
+        public static event EventHandler<bool>? BrowserConnectedUpdate;
 
         private const string wsUrl = "wss://socket.tarkov.dev";
         private const int ReceiveBufferSize = 4096;
@@ -418,6 +420,11 @@ namespace TarkovMonitor
                 var message = JsonNode.Parse(payload.GetBuffer().AsSpan(0, checked((int)payload.Length)));
                 if (message?["type"]?.ToString() != "ping")
                 {
+                    if (message?["type"].ToString() == "connectionStatus")
+                    {
+                        bool connected = message?["data"]?.AsObject()?["connected"]?.GetValue<bool>() ?? false;
+                        BrowserConnectedUpdate?.Invoke(message, connected);
+                    }
                     return true;
                 }
 
@@ -791,6 +798,38 @@ namespace TarkovMonitor
                     ["value"] = map.normalizedName
                 }
             };
+        }
+
+        public static Task<bool> BrowserIsConnected()
+        {
+            JsonObject payload = new()
+            {
+                ["type"] = "isConnected",
+            };
+            TaskCompletionSource<bool> tcs = new();
+            EventHandler<bool> handler = null;
+            handler = (sender, e) =>
+            {
+                BrowserConnectedUpdate -= handler;
+                tcs.TrySetResult(e);
+            };
+            BrowserConnectedUpdate += handler;
+            System.Timers.Timer timeout = new() {
+                AutoReset = false,
+                Interval = TimeSpan.FromSeconds(10).TotalMilliseconds,
+                Enabled = true,
+            };
+            timeout.Elapsed += (sender, e) => {
+                if (tcs.Task.IsCompleted)
+                {
+                    return;
+                }
+                BrowserConnectedUpdate -= handler;
+                tcs.TrySetResult(false);
+            };
+            timeout.Start();
+            Send(payload);
+            return tcs.Task;
         }
 
         private sealed class ConnectionState

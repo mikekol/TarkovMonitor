@@ -408,7 +408,13 @@
   <data name="RetrievedDataFromTarkovTracker" xml:space="preserve">
     <value>Retrieved Tarkov Tracker progress for {0} (level {1}, {2}) ({3}).</value>
   </data>
-  <data name="LaunchTarkovDevWebsiteOnLoad" xml:space="preserve">
-    <value>Launch and connect tarkov.dev website when Tarkov Monitor starts</value>
+  <data name="AutoLaunchTarkovDevWebsite" xml:space="preserve">
+    <value>Launch tarkv.dev website automatically</value>
+  </data>
+  <data name="Connect" xml:space="preserve">
+    <value>Connect</value>
+  </data>
+  <data name="WebsiteAlreadyConnectedMsg" xml:space="preserve">
+    <value>The website is already connected</value>
   </data>
 </root>
