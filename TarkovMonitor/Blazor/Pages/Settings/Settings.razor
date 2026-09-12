@@ -361,9 +361,6 @@
             </MudStack>
             <MudTextField @bind-Value="@RemoteID" MaxLength="4" Label="@LocalizationService.GetString("RemoteID")" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.ContentPaste" OnAdornmentClick="PasteRemoteClick" Class="tm-input tm-input--full"></MudTextField>
             <div>
-                <MudSwitch @bind-Value="@LaunchTarkovDevWebsiteSwitch" Label="@LocalizationService.GetString("AutoLaunchTarkovDevWebsite")" Color="Color.Info" />
-            </div>
-            <div>
                 <MudSwitch @bind-Value="@NavigateMapSwitch" Label="@LocalizationService.GetString("SwitchToTarkovDevMapOnRaidLoad")" Color="Color.Info" />
             </div>
             <div>
@@ -1559,18 +1556,6 @@
             }
             OpenURL($"https://tarkov.dev?connection={RemoteID}");
         });
-    }
-    public bool LaunchTarkovDevWebsiteSwitch
-    {
-        get
-        {
-            return Properties.Settings.Default.autoLaunchTarkovDevWebsite;
-        }
-        set
-        {
-            Properties.Settings.Default.autoLaunchTarkovDevWebsite = value;
-            Properties.Settings.Default.Save();
-        }
     }
     public bool NavigateMapSwitch
     {

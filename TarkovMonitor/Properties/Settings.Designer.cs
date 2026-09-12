@@ -430,17 +430,5 @@ namespace TarkovMonitor.Properties {
                 this["floatingTimerPanelShowRunThrough"] = value;
             }
         }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool autoLaunchTarkovDevWebsite {
-            get {
-                return ((bool)(this["autoLaunchTarkovDevWebsite"]));
-            }
-            set {
-                this["autoLaunchTarkovDevWebsite"] = value;
-            }
-        }
     }
 }

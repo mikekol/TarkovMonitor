@@ -88,15 +88,6 @@ namespace TarkovMonitor.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Launch tarkv.dev website automatically.
-        /// </summary>
-        internal static string AutoLaunchTarkovDevWebsite {
-            get {
-                return ResourceManager.GetString("AutoLaunchTarkovDevWebsite", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Delete raid screenshots automatically.
         /// </summary>
         internal static string AutomaticallyDeleteScreenshotsAfterRaid {

@@ -408,9 +408,6 @@
   <data name="RetrievedDataFromTarkovTracker" xml:space="preserve">
     <value>Retrieved Tarkov Tracker progress for {0} (level {1}, {2}) ({3}).</value>
   </data>
-  <data name="AutoLaunchTarkovDevWebsite" xml:space="preserve">
-    <value>Launch tarkv.dev website automatically</value>
-  </data>
   <data name="Connect" xml:space="preserve">
     <value>Connect</value>
   </data>

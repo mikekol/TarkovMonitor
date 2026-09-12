@@ -24,7 +24,7 @@ namespace TarkovMonitor
             return result.ToString();
         }
 
-        public static void LaunchConnectedBrowser()
+        public static void LaunchConnectedBrowser(string path = "")
         {
             if (Properties.Settings.Default.remoteId == string.Empty)
             {
@@ -32,7 +32,7 @@ namespace TarkovMonitor
             }
             var psi = new ProcessStartInfo
             {
-                FileName = $"https://tarkov.dev?connection={Properties.Settings.Default.remoteId}",
+                FileName = $"https://tarkov.dev{path}?connection={Properties.Settings.Default.remoteId}",
                 UseShellExecute = true,
             };
             Process.Start(psi);

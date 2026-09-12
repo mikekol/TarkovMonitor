@@ -993,9 +993,12 @@ namespace TarkovMonitor
                 var connected = await SocketClient.BrowserIsConnected();
                 if (!connected)
                 {
-                    RemoteCode.LaunchConnectedBrowser();
+                    RemoteCode.LaunchConnectedBrowser($"/map/{map.normalizedName}");
                 }
-                await SocketClient.NavigateToMap(map);
+                else
+                {
+                    await SocketClient.NavigateToMap(map);
+                }
             }
             catch (Exception exception)
             {
