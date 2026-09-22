@@ -825,27 +825,28 @@ namespace TarkovMonitor
                 RecordException("Update checking could not start.", "TM-UPDATE-002", "CheckForNewVersion", ex, "UpdateCheck", "Startup");
             }
 
-            try
+            // No need to do this at startup; it happens when a map is loaded
+            /*try
             {
-                if (Properties.Settings.Default.autoLaunchTarkovDevOnLoad)
+                if (Properties.Settings.Default.autoLaunchTarkovDevWebsite)
                 {
                     if (Properties.Settings.Default.remoteId == String.Empty)
                     {
                         Properties.Settings.Default.remoteId = RemoteCode.Generate();
                         Properties.Settings.Default.Save();
                     }
-                    var psi = new ProcessStartInfo
-                    {
-                        FileName = $"https://tarkov.dev?connection={Properties.Settings.Default.remoteId}",
-                        UseShellExecute = true,
-                    };
-                    Process.Start(psi);
+                    SocketClient.BrowserIsConnected().ContinueWith(task => {
+                        if (!task.IsCompletedSuccessfully || !task.Result)
+                        {
+                            RemoteCode.LaunchConnectedBrowser();
+                        }
+                    });
                 }
             }
             catch (Exception ex)
             {
                 RecordException("Tarkov.dev website could not be launched.", "TM-WEBSITE-001", "Launch", ex, "UpdateCheck", "Startup");
-            }
+            }*/
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
@@ -990,7 +991,15 @@ namespace TarkovMonitor
             var startedUtc = DateTime.UtcNow;
             try
             {
-                await SocketClient.NavigateToMap(map);
+                var connected = await SocketClient.BrowserIsConnected();
+                if (!connected)
+                {
+                    RemoteCode.LaunchConnectedBrowser($"/map/{map.normalizedName}");
+                }
+                else
+                {
+                    await SocketClient.NavigateToMap(map);
+                }
             }
             catch (Exception exception)
             {

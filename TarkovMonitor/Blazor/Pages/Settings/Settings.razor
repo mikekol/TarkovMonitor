@@ -357,12 +357,9 @@
                         <span class="tm-card-heading-text">@TarkovDevWebsiteRemoteTitle</span>
                     </MudText>
                 </MudStack>
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Info" StartIcon="@Icons.Material.Filled.OpenInBrowser" Class="align-right" OnClick="ConnectToWebsiteClick">Connect</MudButton>
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Info" StartIcon="@Icons.Material.Filled.OpenInBrowser" Class="align-right" OnClick="ConnectToWebsiteClick">@LocalizationService.GetString("Connect")</MudButton>
             </MudStack>
             <MudTextField @bind-Value="@RemoteID" MaxLength="4" Label="@LocalizationService.GetString("RemoteID")" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.ContentPaste" OnAdornmentClick="PasteRemoteClick" Class="tm-input tm-input--full"></MudTextField>
-            <div>
-                <MudSwitch @bind-Value="@LaunchTarkovDevWebsiteOnStartSwitch" Label="@LocalizationService.GetString("LaunchTarkovDevWebsiteOnLoad")" Color="Color.Info" />
-            </div>
             <div>
                 <MudSwitch @bind-Value="@NavigateMapSwitch" Label="@LocalizationService.GetString("SwitchToTarkovDevMapOnRaidLoad")" Color="Color.Info" />
             </div>
@@ -1558,19 +1555,15 @@
         {
             RemoteID = RemoteCode.Generate();
         }
-        OpenURL($"https://tarkov.dev?connection={RemoteID}");
-    }
-    public bool LaunchTarkovDevWebsiteOnStartSwitch
-    {
-        get
+        SocketClient.BrowserIsConnected().ContinueWith(task =>
         {
-            return Properties.Settings.Default.autoLaunchTarkovDevOnLoad;
-        }
-        set
-        {
-            Properties.Settings.Default.autoLaunchTarkovDevOnLoad = value;
-            Properties.Settings.Default.Save();
-        }
+            if (task.IsCompletedSuccessfully && task.Result)
+            {
+                messageLog.AddMessage(LocalizationService.GetString("WebsiteAlreadyConnectedMsg"), "info");
+                return;
+            }
+            OpenURL($"https://tarkov.dev?connection={RemoteID}");
+        });
     }
     public bool NavigateMapSwitch
     {

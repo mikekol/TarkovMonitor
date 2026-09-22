@@ -133,6 +133,15 @@ namespace TarkovMonitor.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Connect.
+        /// </summary>
+        internal static string Connect {
+            get {
+                return ResourceManager.GetString("Connect", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Couldn’t find the Escape from Tarkov installation or any log files..
         /// </summary>
         internal static string CouldNotFindEFTInstallation {
@@ -363,15 +372,6 @@ namespace TarkovMonitor.Properties {
         internal static string LastProfileLoaded {
             get {
                 return ResourceManager.GetString("LastProfileLoaded", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Launch and connect tarkov.dev website when Tarkov Monitor starts.
-        /// </summary>
-        internal static string LaunchTarkovDevWebsiteOnLoad {
-            get {
-                return ResourceManager.GetString("LaunchTarkovDevWebsiteOnLoad", resourceCulture);
             }
         }
         
@@ -921,6 +921,15 @@ namespace TarkovMonitor.Properties {
         internal static string WarningMessage {
             get {
                 return ResourceManager.GetString("WarningMessage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The website is already connected.
+        /// </summary>
+        internal static string WebsiteAlreadyConnectedMsg {
+            get {
+                return ResourceManager.GetString("WebsiteAlreadyConnectedMsg", resourceCulture);
             }
         }
         

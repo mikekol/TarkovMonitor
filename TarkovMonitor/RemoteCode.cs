@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography;
+﻿using System.Diagnostics;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace TarkovMonitor
@@ -21,6 +22,20 @@ namespace TarkovMonitor
                 }
             }
             return result.ToString();
+        }
+
+        public static void LaunchConnectedBrowser(string path = "")
+        {
+            if (Properties.Settings.Default.remoteId == string.Empty)
+            {
+                return;
+            }
+            var psi = new ProcessStartInfo
+            {
+                FileName = $"https://tarkov.dev{path}?connection={Properties.Settings.Default.remoteId}",
+                UseShellExecute = true,
+            };
+            Process.Start(psi);
         }
     }
 }
